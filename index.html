@@ -138,7 +138,7 @@
       <section id="contactsView" class="view" data-page="contacts" hidden>
         <div class="section-head"><div><h2 class="section-title">Контакты</h2><div class="section-note">Найдите человека по имени или имени пользователя и начните переписку.</div></div></div>
         <div class="field" style="max-width:520px"><label for="contactSearch">Поиск людей</label><input id="contactSearch" type="search" placeholder="Введите имя или username…"></div>
-        <div id="contactResults" class="contact-results"><div class="empty" style="grid-column:1/-1">Загрузка всех пользователей…</div></div>
+        <div id="contactResults" class="contact-results"><div class="empty" style="grid-column:1/-1">Откройте вкладку «Контакты», чтобы загрузить всех пользователей…</div></div>
       </section>
 
       <section id="profileView" class="view" data-page="profile" hidden>
@@ -187,7 +187,7 @@
     const SUPABASE_ANON_KEY = 'sb_publishable_YI45md4z0v49nU5cvJuibA_SOErCNba';
 
     const $ = (id) => document.getElementById(id);
-    const state = { user: null, profile: null, currentView: 'chats', chats: [], selectedChatId: null, selectedChat: null, messagesChannel: null, authMode: 'login', toastTimer: null, contactTimer: null, chatTimer: null };
+    const state = { user: null, profile: null, adminIds: new Set(), currentView: 'chats', chats: [], selectedChatId: null, selectedChat: null, messagesChannel: null, liveChannel: null, liveTimer: null, messageTimer: null, authMode: 'login', toastTimer: null, contactTimer: null, chatTimer: null, isLoadingContacts: false, isLoadingChats: false, isSyncingMessages: false };
     let supabase;
 
     function escapeHtml(value) {
@@ -277,10 +277,22 @@
       finally { setLoading(button, false); }
     });
 
-    function verifiedMark(username) {
-      return String(username || '').toLowerCase() === 'mihas105ka'
+    function verifiedMark(userId) {
+      return userId && state.adminIds.has(String(userId))
         ? '<span class="verified-badge" title="Проверенный профиль Связи" aria-label="Проверенный профиль">✓</span>'
         : '';
+    }
+
+    async function loadAdminIds() {
+      try {
+        const { data, error } = await supabase.from('app_admins').select('user_id');
+        if (error) throw error;
+        state.adminIds = new Set((data || []).map(row => String(row.user_id)));
+      } catch (error) {
+        // If the admin table has not been installed yet, fail closed: do not show a forged badge.
+        state.adminIds = new Set();
+        console.warn('Admin badge list unavailable; run the supplied Supabase SQL setup.', error);
+      }
     }
 
     function setProfileToUI(profile) {
@@ -288,10 +300,10 @@
       const name = p.display_name || p.username || state.user?.email?.split('@')[0] || 'Пользователь';
       const username = p.username || 'user';
       $('sidebarAvatar').innerHTML = p.avatar_url && /^https:\/\//i.test(p.avatar_url) ? `<img src="${escapeHtml(p.avatar_url)}" alt="">` : escapeHtml(initials(name));
-      $('sidebarName').innerHTML = escapeHtml(name) + verifiedMark(username);
+      $('sidebarName').innerHTML = escapeHtml(name) + verifiedMark(p.id);
       $('sidebarHandle').textContent = '@' + username;
       $('profileAvatar').innerHTML = p.avatar_url && /^https:\/\//i.test(p.avatar_url) ? `<img src="${escapeHtml(p.avatar_url)}" alt="">` : escapeHtml(initials(name));
-      $('profilePreviewName').innerHTML = escapeHtml(name) + verifiedMark(username);
+      $('profilePreviewName').innerHTML = escapeHtml(name) + verifiedMark(p.id);
       $('profilePreviewHandle').textContent = '@' + username;
       $('profileDisplayNameInput').value = p.display_name || '';
       $('profileUsernameInput').value = p.username || '';
@@ -326,9 +338,13 @@
         console.error('Profile load failed:', error);
         showToast('Вход выполнен, но профиль не загрузился: ' + friendlyError(error), 'error');
       }
+      await loadAdminIds();
+      // Repaint the own profile now that verified/admin IDs are loaded.
+      if (state.profile) setProfileToUI(state.profile);
       $('settingsEmail').textContent = state.user.email || 'Не указан';
       navigate('chats');
       await loadChats();
+      startLiveUpdates();
     }
 
     function navigate(viewName) {
@@ -350,6 +366,7 @@
       $('pageSubtitle').textContent = titles[viewName][1];
       if (viewName === 'profile' && state.profile) setProfileToUI(state.profile);
       if (viewName === 'settings') $('settingsEmail').textContent = state.user?.email || 'Не указан';
+      if (viewName === 'contacts' && state.user) loadContacts($('contactSearch').value.trim());
     }
     document.querySelectorAll('.nav-btn[data-view]').forEach(button => button.addEventListener('click', () => navigate(button.dataset.view)));
     $('settingsToProfile').addEventListener('click', () => navigate('profile'));
@@ -361,7 +378,8 @@
 
     async function loadChats() {
       if (!state.user) return;
-      $('chatList').innerHTML = '<div class="empty">Загружаем чаты…</div>';
+      state.isLoadingChats = true;
+      if (!state.chats.length) $('chatList').innerHTML = '<div class="empty">Загружаем чаты…</div>';
       try {
         const { data: memberRows, error: membersError } = await supabase.from('conversation_members').select('conversation_id').eq('user_id', state.user.id);
         if (membersError) throw membersError;
@@ -403,6 +421,8 @@
         console.error('Load chats failed:', error);
         $('chatList').innerHTML = `<div class="empty"><div class="empty-icon">⚠️</div>${escapeHtml(friendlyError(error))}<br><button id="retryChats" class="btn btn-secondary" style="margin-top:12px" type="button">Повторить</button></div>`;
         $('retryChats')?.addEventListener('click', loadChats);
+      } finally {
+        state.isLoadingChats = false;
       }
     }
 
@@ -473,7 +493,7 @@
     }
     function renderMessage(message) {
       const mine = message.sender_id === state.user.id;
-      return `<div class="message ${mine ? 'mine' : ''}" data-message-id="${escapeHtml(message.id)}">${escapeHtml(message.content || '')}<span class="message-time">${escapeHtml(formatTime(message.created_at))}</span></div>`;
+      return `<div class="message ${mine ? 'mine' : ''}" data-message-id="${escapeHtml(message.id)}" data-created-at="${escapeHtml(message.created_at)}">${escapeHtml(message.content || '')}<span class="message-time">${escapeHtml(formatTime(message.created_at))}</span></div>`;
     }
     function scrollMessagesToBottom() { requestAnimationFrame(() => { $('messageList').scrollTop = $('messageList').scrollHeight; }); }
     function subscribeToMessages(chatId) {
@@ -491,6 +511,87 @@
         }).subscribe();
     }
 
+    function appendMessageIfNew(message) {
+      if (!message || !message.id) return false;
+      const selector = `[data-message-id="${CSS.escape(String(message.id))}"]`;
+      if ($('messageList').querySelector(selector)) return false;
+      const placeholder = $('messageList').querySelector('.empty');
+      if (placeholder) $('messageList').innerHTML = '';
+      $('messageList').insertAdjacentHTML('beforeend', renderMessage(message));
+      return true;
+    }
+
+    // Polling is a fallback if Supabase Realtime is not enabled for a table/project.
+    // It also recovers from mobile browsers sleeping the realtime WebSocket.
+    async function syncMessages(chatId) {
+      if (!state.user || !chatId || state.selectedChatId !== chatId || state.isSyncingMessages) return;
+      state.isSyncingMessages = true;
+      try {
+        const lastNode = $('messageList').querySelector('.message[data-created-at]:last-of-type');
+        let request = supabase.from('messages').select('id, conversation_id, sender_id, content, created_at')
+          .eq('conversation_id', chatId).order('created_at', { ascending: true }).limit(100);
+        const lastCreatedAt = lastNode?.dataset.createdAt;
+        if (lastCreatedAt) request = request.gte('created_at', lastCreatedAt);
+        const { data, error } = await request;
+        if (error) throw error;
+        if (state.selectedChatId !== chatId) return;
+        let added = false;
+        (data || []).forEach(message => { if (appendMessageIfNew(message)) added = true; });
+        if (added) {
+          scrollMessagesToBottom();
+          const newest = (data || []).at(-1);
+          const chat = state.chats.find(c => c.id === chatId);
+          if (newest && chat && (!chat.last || String(newest.created_at) >= String(chat.last.created_at))) {
+            chat.last = newest;
+            renderChats();
+          }
+        }
+      } catch (error) {
+        console.warn('Background message refresh failed:', error);
+      } finally {
+        state.isSyncingMessages = false;
+      }
+    }
+
+    function startLiveUpdates() {
+      if (!state.user) return;
+      if (state.liveChannel) { supabase.removeChannel(state.liveChannel); state.liveChannel = null; }
+      if (state.liveTimer) { clearInterval(state.liveTimer); state.liveTimer = null; }
+      if (state.messageTimer) { clearInterval(state.messageTimer); state.messageTimer = null; }
+
+      const userId = state.user.id;
+      state.liveChannel = supabase.channel('app-live-' + userId)
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles' }, () => {
+          if (state.currentView === 'contacts') loadContacts($('contactSearch').value.trim());
+          if (state.currentView === 'chats') loadChats();
+          loadAdminIds().then(() => { if (state.profile) setProfileToUI(state.profile); });
+        })
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'conversation_members', filter: 'user_id=eq.' + userId }, () => loadChats())
+        .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, payload => {
+          const message = payload.new;
+          if (message && message.conversation_id === state.selectedChatId) {
+            if (appendMessageIfNew(message)) scrollMessagesToBottom();
+          }
+          if (state.currentView === 'chats') loadChats();
+        })
+        .subscribe(status => {
+          if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+            console.warn('Supabase Realtime unavailable; polling fallback remains enabled.');
+          }
+        });
+
+      // Refresh the open conversation every 3 seconds so it works even without Realtime publication.
+      state.messageTimer = setInterval(() => {
+        if (!document.hidden && state.selectedChatId) syncMessages(state.selectedChatId);
+      }, 3000);
+      // Update lists every 10 seconds as a fallback for new registrations and new conversations.
+      state.liveTimer = setInterval(() => {
+        if (document.hidden || !state.user) return;
+        if (state.currentView === 'contacts') loadContacts($('contactSearch').value.trim());
+        if (state.currentView === 'chats') loadChats();
+      }, 10000);
+    }
+
     $('messageForm').addEventListener('submit', async (event) => {
       event.preventDefault();
       const content = $('messageInput').value.trim();
@@ -502,9 +603,7 @@
         const { data, error } = await supabase.from('messages').insert({ conversation_id: chatId, sender_id: state.user.id, content }).select('id, conversation_id, sender_id, content, created_at').single();
         if (error) throw error;
         $('messageInput').value = '';
-        const placeholder = $('messageList').querySelector('.empty');
-        if (placeholder) $('messageList').innerHTML = '';
-        if (!$('messageList').querySelector(`[data-message-id="${CSS.escape(String(data.id))}"]`)) $('messageList').insertAdjacentHTML('beforeend', renderMessage(data));
+        appendMessageIfNew(data);
         scrollMessagesToBottom();
         await loadChats();
       } catch (error) { showToast('Не удалось отправить сообщение: ' + friendlyError(error), 'error'); }
@@ -529,29 +628,39 @@
     $('contactSearch').addEventListener('input', () => {
       if (state.contactTimer) clearTimeout(state.contactTimer);
       const query = $('contactSearch').value.trim();
-      if (query.length < 2) { $('contactResults').innerHTML = '<div class="empty" style="grid-column:1/-1">Введите не менее двух символов для поиска.</div>'; return; }
-      $('contactResults').innerHTML = '<div class="empty" style="grid-column:1/-1">Ищем…</div>';
-      state.contactTimer = setTimeout(() => searchContacts(query), 300);
+      $('contactResults').innerHTML = '<div class="empty" style="grid-column:1/-1">Обновляем список пользователей…</div>';
+      state.contactTimer = setTimeout(() => loadContacts(query), 250);
     });
-    async function searchContacts(query) {
+
+    async function loadContacts(query = '') {
       if (!state.user) return;
+      state.isLoadingContacts = true;
+      const normalizedQuery = String(query || '').trim();
       try {
-        const safe = query.replace(/[,%()]/g, ' ').trim();
-        let request = supabase.from('profiles').select('id, username, display_name, avatar_url, last_seen').neq('id', state.user.id);
-        if (safe.length >= 2) request = request.or(`username.ilike.%${safe}%,display_name.ilike.%${safe}%`);
-        else if (safe.length === 1) {
-          $('contactResults').innerHTML = '<div class="empty" style="grid-column:1/-1">Для поиска введите минимум 2 символа.</div>';
+        let request = supabase.from('profiles').select('id, username, display_name, avatar_url, last_seen, created_at').neq('id', state.user.id);
+        if (normalizedQuery.length) {
+          // Remove PostgREST filter metacharacters before interpolating into .or().
+          const safe = normalizedQuery.replace(/[,%()]/g, ' ').replace(/[\\]/g, '').trim();
+          if (safe.length) request = request.or(`username.ilike.%${safe}%,display_name.ilike.%${safe}%`);
+        }
+        const { data, error } = await request.order('created_at', { ascending: false }).limit(500);
+        if (error) throw error;
+        if ($('contactSearch').value.trim() !== normalizedQuery) return;
+        const people = data || [];
+        if (!people.length) {
+          $('contactResults').innerHTML = `<div class="empty" style="grid-column:1/-1">${normalizedQuery ? 'Никого не нашли. Попробуйте другой запрос.' : 'Пока никто больше не зарегистрировался.'}</div>`;
           return;
         }
-        const { data, error } = await request.order('created_at', { ascending: false }).limit(200);
-        if (error) throw error;
-        if ($('contactSearch').value.trim() !== query) return;
-        const people = data || [];
-        if (!people.length) { $('contactResults').innerHTML = '<div class="empty" style="grid-column:1/-1">Никого не нашли. Попробуйте другой запрос.</div>'; return; }
-        $('contactResults').innerHTML = people.map(person => `<div class="contact-card">${avatarMarkup(person)}<div class="contact-card-info"><div class="contact-card-name">${escapeHtml(person.display_name || person.username || 'Пользователь')}${verifiedMark(person.username)}</div><div class="contact-card-handle">@${escapeHtml(person.username || '')}</div></div><button class="btn btn-secondary" type="button" data-contact-id="${escapeHtml(person.id)}">Написать</button></div>`).join('');
+        $('contactResults').innerHTML = people.map(person => `<div class="contact-card">${avatarMarkup(person)}<div class="contact-card-info"><div class="contact-card-name">${escapeHtml(person.display_name || person.username || 'Пользователь')}${verifiedMark(person.id)}</div><div class="contact-card-handle">@${escapeHtml(person.username || '')}</div></div><button class="btn btn-secondary" type="button" data-contact-id="${escapeHtml(person.id)}">Написать</button></div>`).join('');
         $('contactResults').querySelectorAll('[data-contact-id]').forEach(button => button.addEventListener('click', () => startConversation(button.dataset.contactId)));
-      } catch (error) { console.error('Search contacts failed:', error); $('contactResults').innerHTML = `<div class="empty" style="grid-column:1/-1">Не удалось найти контакты: ${escapeHtml(friendlyError(error))}</div>`; }
+      } catch (error) {
+        console.error('Load contacts failed:', error);
+        $('contactResults').innerHTML = `<div class="empty" style="grid-column:1/-1">Не удалось загрузить пользователей: ${escapeHtml(friendlyError(error))}</div>`;
+      } finally {
+        state.isLoadingContacts = false;
+      }
     }
+
     async function startConversation(targetUserId) {
       const buttons = $('contactResults').querySelectorAll('button'); buttons.forEach(b => b.disabled = true);
       try {
@@ -606,6 +715,10 @@
         if (error) throw error;
         state.user = null; state.profile = null; state.chats = []; state.selectedChatId = null; state.selectedChat = null;
         if (state.messagesChannel) { supabase.removeChannel(state.messagesChannel); state.messagesChannel = null; }
+        if (state.liveChannel) { supabase.removeChannel(state.liveChannel); state.liveChannel = null; }
+        if (state.liveTimer) { clearInterval(state.liveTimer); state.liveTimer = null; }
+        if (state.messageTimer) { clearInterval(state.messageTimer); state.messageTimer = null; }
+        state.adminIds = new Set();
         $('app').hidden = true; $('authScreen').hidden = false; $('authForm').reset(); setAuthMode('login');
       } catch (error) { showToast('Не удалось выйти: ' + friendlyError(error), 'error'); }
     });
@@ -624,6 +737,10 @@
         else if (!session?.user && state.user) {
           state.user = null; state.profile = null; state.chats = []; state.selectedChatId = null;
           if (state.messagesChannel) { supabase.removeChannel(state.messagesChannel); state.messagesChannel = null; }
+          if (state.liveChannel) { supabase.removeChannel(state.liveChannel); state.liveChannel = null; }
+          if (state.liveTimer) { clearInterval(state.liveTimer); state.liveTimer = null; }
+          if (state.messageTimer) { clearInterval(state.messageTimer); state.messageTimer = null; }
+          state.adminIds = new Set();
           $('app').hidden = true; $('authScreen').hidden = false;
         }
       });
