@@ -72,7 +72,10 @@
     .online-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#35bc79;margin-right:5px}
     @media(max-width:850px){.app{grid-template-columns:76px minmax(0,1fr);gap:10px;padding:10px}.sidebar{padding:15px 8px;border-radius:18px;min-height:calc(100dvh - 20px)}.sidebar .brand{justify-content:center;margin:3px 0 25px;font-size:0}.sidebar .brand-mark{width:42px;height:42px}.nav-label{display:none}.nav-btn{justify-content:center;padding:13px 6px}.nav-btn span:not(.ico){display:none}.sidebar-bottom{padding:12px 0 0}.mini-user{justify-content:center;padding:0}.mini-user-info{display:none}.sidebar-bottom .avatar{width:40px;height:40px;flex-basis:40px}.chat-workspace{grid-template-columns:minmax(220px,280px) minmax(0,1fr)}}
     @media(max-width:620px){.app{display:block;padding:0;min-height:100dvh}.sidebar{position:fixed;z-index:20;left:0;right:0;bottom:0;top:auto;height:72px;min-height:0;border-radius:17px 17px 0 0;border:1px solid var(--line);border-bottom:0;padding:6px 6px calc(6px + env(safe-area-inset-bottom));display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:4px;background:#fff;box-shadow:0 -5px 24px #1d264b0b}.sidebar .brand,.sidebar .nav-label,.sidebar-bottom{display:none}.nav-btn{display:flex;flex-direction:column;gap:3px;justify-content:center;align-items:center;margin:0;padding:4px 1px;border-radius:10px;font-size:10px;min-width:0}.nav-btn .ico{font-size:19px;width:auto}.nav-btn span:not(.ico){display:block;font-size:10px;white-space:nowrap}.main{border:0;border-radius:0;box-shadow:none;min-height:100dvh;padding-bottom:72px;overflow:visible}.topbar{min-height:67px;padding:13px 16px}.page-heading{font-size:19px}.page-subtitle{font-size:11px}.view{padding:17px 15px;overflow:visible}.chat-workspace{display:block;height:calc(100dvh - 139px);min-height:370px;margin:-17px -15px}.chat-list-pane{height:100%;border-right:0}.chat-list-top{padding:15px 14px 11px}.message-pane{display:none;height:100%;min-height:0}.chat-workspace.mobile-chat-open .chat-list-pane{display:none}.chat-workspace.mobile-chat-open .message-pane{display:flex}.back-btn{display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;padding:0;flex:0 0 36px}.message-head{padding:11px 10px;gap:8px}.message-list{padding:14px 12px}.message{max-width:88%}.composer{padding:10px}.form-grid{grid-template-columns:1fr}.profile-card{padding:16px}.profile-top .avatar{width:58px;height:58px;flex-basis:58px}.contact-results{grid-template-columns:1fr}.section-head{gap:7px}.auth-card{padding:23px;border-radius:20px}.setting-row{align-items:flex-start}.setting-row .btn{flex:0 0 auto}.toast{bottom:85px}}
-  </style>
+  
+    .verified-badge{display:inline-flex;align-items:center;justify-content:center;width:17px;height:17px;margin-left:5px;border-radius:50%;background:#229ed9;color:#fff;font-size:12px;font-weight:800;line-height:1;vertical-align:middle;flex:none}
+    .verified-badge svg{width:11px;height:11px}
+</style>
 </head>
 <body>
   <section id="authScreen" class="auth-screen">
@@ -135,7 +138,7 @@
       <section id="contactsView" class="view" data-page="contacts" hidden>
         <div class="section-head"><div><h2 class="section-title">Контакты</h2><div class="section-note">Найдите человека по имени или имени пользователя и начните переписку.</div></div></div>
         <div class="field" style="max-width:520px"><label for="contactSearch">Поиск людей</label><input id="contactSearch" type="search" placeholder="Введите имя или username…"></div>
-        <div id="contactResults" class="contact-results"><div class="empty" style="grid-column:1/-1">Введите не менее двух символов для поиска.</div></div>
+        <div id="contactResults" class="contact-results"><div class="empty" style="grid-column:1/-1">Загрузка всех пользователей…</div></div>
       </section>
 
       <section id="profileView" class="view" data-page="profile" hidden>
@@ -274,15 +277,21 @@
       finally { setLoading(button, false); }
     });
 
+    function verifiedMark(username) {
+      return String(username || '').toLowerCase() === 'mihas105ka'
+        ? '<span class="verified-badge" title="Проверенный профиль Связи" aria-label="Проверенный профиль">✓</span>'
+        : '';
+    }
+
     function setProfileToUI(profile) {
       const p = profile || {};
       const name = p.display_name || p.username || state.user?.email?.split('@')[0] || 'Пользователь';
       const username = p.username || 'user';
       $('sidebarAvatar').innerHTML = p.avatar_url && /^https:\/\//i.test(p.avatar_url) ? `<img src="${escapeHtml(p.avatar_url)}" alt="">` : escapeHtml(initials(name));
-      $('sidebarName').textContent = name;
+      $('sidebarName').innerHTML = escapeHtml(name) + verifiedMark(username);
       $('sidebarHandle').textContent = '@' + username;
       $('profileAvatar').innerHTML = p.avatar_url && /^https:\/\//i.test(p.avatar_url) ? `<img src="${escapeHtml(p.avatar_url)}" alt="">` : escapeHtml(initials(name));
-      $('profilePreviewName').textContent = name;
+      $('profilePreviewName').innerHTML = escapeHtml(name) + verifiedMark(username);
       $('profilePreviewHandle').textContent = '@' + username;
       $('profileDisplayNameInput').value = p.display_name || '';
       $('profileUsernameInput').value = p.username || '';
@@ -525,15 +534,21 @@
       state.contactTimer = setTimeout(() => searchContacts(query), 300);
     });
     async function searchContacts(query) {
-      if (!state.user || query.length < 2) return;
+      if (!state.user) return;
       try {
         const safe = query.replace(/[,%()]/g, ' ').trim();
-        const { data, error } = await supabase.from('profiles').select('id, username, display_name, avatar_url, last_seen').neq('id', state.user.id).or(`username.ilike.%${safe}%,display_name.ilike.%${safe}%`).limit(30);
+        let request = supabase.from('profiles').select('id, username, display_name, avatar_url, last_seen').neq('id', state.user.id);
+        if (safe.length >= 2) request = request.or(`username.ilike.%${safe}%,display_name.ilike.%${safe}%`);
+        else if (safe.length === 1) {
+          $('contactResults').innerHTML = '<div class="empty" style="grid-column:1/-1">Для поиска введите минимум 2 символа.</div>';
+          return;
+        }
+        const { data, error } = await request.order('created_at', { ascending: false }).limit(200);
         if (error) throw error;
         if ($('contactSearch').value.trim() !== query) return;
         const people = data || [];
         if (!people.length) { $('contactResults').innerHTML = '<div class="empty" style="grid-column:1/-1">Никого не нашли. Попробуйте другой запрос.</div>'; return; }
-        $('contactResults').innerHTML = people.map(person => `<div class="contact-card">${avatarMarkup(person)}<div class="contact-card-info"><div class="contact-card-name">${escapeHtml(person.display_name || person.username || 'Пользователь')}</div><div class="contact-card-handle">@${escapeHtml(person.username || '')}</div></div><button class="btn btn-secondary" type="button" data-contact-id="${escapeHtml(person.id)}">Написать</button></div>`).join('');
+        $('contactResults').innerHTML = people.map(person => `<div class="contact-card">${avatarMarkup(person)}<div class="contact-card-info"><div class="contact-card-name">${escapeHtml(person.display_name || person.username || 'Пользователь')}${verifiedMark(person.username)}</div><div class="contact-card-handle">@${escapeHtml(person.username || '')}</div></div><button class="btn btn-secondary" type="button" data-contact-id="${escapeHtml(person.id)}">Написать</button></div>`).join('');
         $('contactResults').querySelectorAll('[data-contact-id]').forEach(button => button.addEventListener('click', () => startConversation(button.dataset.contactId)));
       } catch (error) { console.error('Search contacts failed:', error); $('contactResults').innerHTML = `<div class="empty" style="grid-column:1/-1">Не удалось найти контакты: ${escapeHtml(friendlyError(error))}</div>`; }
     }
