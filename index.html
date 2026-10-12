@@ -1,0 +1,609 @@
+
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Связь — мессенджер</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+:root{color-scheme:dark;--bg:#0b1220;--panel:#131e30;--line:#27364d;--blue:#4285f4;--text:#f3f6fc;--muted:#9aabc3}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:16px Arial,sans-serif;min-height:100vh}
+button,input{font:inherit}
+button{border:0;border-radius:10px;padding:12px 15px;background:var(--blue);color:white;font-weight:bold;cursor:pointer}
+button:disabled{opacity:.5}
+input{width:100%;padding:13px;background:#0b1423;border:1px solid var(--line);border-radius:10px;color:white;outline:none}
+input:focus{border-color:var(--blue)}
+.small{font-size:13px;color:var(--muted)}
+.hidden{display:none!important}
+#auth{max-width:430px;margin:8vh auto;padding:25px}
+.logo{font-size:34px;font-weight:bold;color:#75aaff;margin-bottom:8px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:20px}
+.stack{display:flex;flex-direction:column;gap:12px}
+.tabs{display:flex;gap:8px;margin:18px 0}
+.tabs button{flex:1;background:#243249}
+.tabs button.active{background:var(--blue)}
+#app{height:100dvh;display:flex;max-width:1200px;margin:auto;background:var(--bg)}
+#sidebar{width:340px;max-width:42%;border-right:1px solid var(--line);display:flex;flex-direction:column;min-height:0}
+.top{padding:18px;border-bottom:1px solid var(--line)}
+.brand{font-size:25px;font-weight:bold;color:#75aaff}
+#me{margin-top:9px;overflow-wrap:anywhere}
+.search{padding:14px;border-bottom:1px solid var(--line)}
+.searchrow{display:flex;gap:8px;margin-top:8px}
+.searchrow input{min-width:0}
+.searchrow button{padding:10px}
+#searchResult{padding:0 14px}
+.result{margin-top:10px;background:#1c2b42;border-radius:12px;padding:12px;overflow-wrap:anywhere}
+#chatList{overflow-y:auto;flex:1}
+.chatitem{padding:15px 17px;border-bottom:1px solid var(--line);cursor:pointer;overflow-wrap:anywhere}
+.chatitem.active,.chatitem:hover{background:#19283d}
+.chatitem strong{display:block;margin-bottom:5px}
+#main{flex:1;min-width:0;display:flex;flex-direction:column}
+#chatHeader{padding:18px;border-bottom:1px solid var(--line);font-weight:bold;overflow-wrap:anywhere}
+#messages{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:10px}
+.bubble{max-width:85%;padding:11px 13px;border-radius:14px;background:#1b2b42;align-self:flex-start;overflow-wrap:anywhere;white-space:pre-wrap}
+.bubble.mine{background:#245bb0;align-self:flex-end}
+.bubble .time{font-size:11px;color:#d1ddf1;margin-top:5px}
+#sendForm{display:flex;gap:8px;padding:12px;border-top:1px solid var(--line)}
+#sendForm input{min-width:0}
+#empty{margin:auto;text-align:center;padding:25px;color:var(--muted)}
+#status{padding:10px 15px;color:#a9c7ff;font-size:13px;overflow-wrap:anywhere}
+#logout{background:#283950;margin-top:12px;width:100%}
+@media(max-width:650px){
+ #app{height:100dvh}
+ #sidebar{width:39%;max-width:39%}
+ .top{padding:12px 9px}.brand{font-size:21px}
+ .search{padding:9px 7px}.searchrow{flex-direction:column}
+ .searchrow button{width:100%;padding:9px}
+ .chatitem{padding:12px 8px;font-size:14px}
+ #chatHeader{padding:14px 10px}
+ #messages{padding:10px}
+ #sendForm{padding:8px}
+ #sendForm button{padding:10px}
+}
+</style>
+</head>
+<body>
+
+<section id="auth">
+  <div class="logo">✦ Связь</div>
+  <p class="small">Твой личный мессенджер</p>
+  <div class="card">
+    <div class="tabs">
+      <button id="loginTab" class="active" type="button">Войти</button>
+      <button id="signupTab" type="button">Регистрация</button>
+    </div>
+    <form id="authForm" class="stack">
+      <input id="email" type="email" placeholder="Электронная почта" required autocomplete="email">
+      <input id="password" type="password" placeholder="Пароль (не менее 6 символов)" required minlength="6" autocomplete="current-password">
+      <input id="displayName" class="hidden" type="text" placeholder="Как тебя называть" maxlength="40">
+      <button id="authButton" type="submit">Войти</button>
+    </form>
+    <p id="authMessage" class="small"></p>
+  </div>
+</section>
+
+<section id="app" class="hidden">
+  <aside id="sidebar">
+    <div class="top">
+      <div class="brand">✦ Связь</div>
+      <div id="me" class="small"></div>
+      <button id="logout" type="button">Выйти из аккаунта</button>
+    </div>
+    <div class="search">
+      <div><strong>Найти человека</strong></div>
+      <div class="small">Введи ID пользователя</div>
+      <div class="searchrow">
+        <input id="userSearch" placeholder="ID пользователя">
+        <button id="searchButton" type="button">Найти</button>
+      </div>
+    </div>
+    <div id="searchResult"></div>
+    <div class="top"><strong>Мои чаты</strong></div>
+    <div id="chatList"></div>
+  </aside>
+  <main id="main">
+    <div id="chatHeader">Личные сообщения</div>
+    <div id="messages"><div id="empty">Найди человека по ID, чтобы начать общение.</div></div>
+    <form id="sendForm" class="hidden">
+      <input id="messageInput" placeholder="Напиши сообщение..." maxlength="4000" autocomplete="off" required>
+      <button id="sendButton" type="submit">Отправить</button>
+    </form>
+    <div id="status"></div>
+  </main>
+</section>
+
+<script>
+(() => {
+  const SUPABASE_URL = 'https://bauslxbeeoplfiuhmtit.supabase.co';
+  const SUPABASE_KEY = 'sb_publishable_YI45md4z0v49nU5cvJuibA_SOErCNba';
+
+  const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+  const $ = id => document.getElementById(id);
+
+  let user = null;
+  let profile = null;
+  let currentConversation = null;
+  let currentOtherProfile = null;
+  let messageChannel = null;
+  let isSignup = false;
+  let loadingMessages = false;
+
+  function status(message) {
+    $('status').textContent = message || '';
+  }
+
+  function errorText(error) {
+    return error?.message || 'Что-то пошло не так. Попробуй ещё раз.';
+  }
+
+  function setAuthMode(signup) {
+    isSignup = signup;
+    $('loginTab').classList.toggle('active', !signup);
+    $('signupTab').classList.toggle('active', signup);
+    $('displayName').classList.toggle('hidden', !signup);
+    $('displayName').required = signup;
+    $('authButton').textContent = signup ? 'Создать аккаунт' : 'Войти';
+    $('password').autocomplete = signup ? 'new-password' : 'current-password';
+    $('authMessage').textContent = '';
+  }
+
+  $('loginTab').addEventListener('click', () => setAuthMode(false));
+  $('signupTab').addEventListener('click', () => setAuthMode(true));
+
+  $('authForm').addEventListener('submit', async event => {
+    event.preventDefault();
+    $('authButton').disabled = true;
+    $('authMessage').textContent = 'Подожди...';
+
+    try {
+      const email = $('email').value.trim();
+      const password = $('password').value;
+      let result;
+
+      if (isSignup) {
+        result = await db.auth.signUp({
+          email,
+          password,
+          options: {
+            data: {
+              display_name: $('displayName').value.trim()
+            }
+          }
+        });
+      } else {
+        result = await db.auth.signInWithPassword({ email, password });
+      }
+
+      if (result.error) throw result.error;
+
+      if (isSignup && !result.data.session) {
+        $('authMessage').textContent =
+          'Аккаунт создан! Проверь почту и подтверди регистрацию, затем войди.';
+        return;
+      }
+
+      user = result.data.user;
+      await enterApp();
+    } catch (error) {
+      $('authMessage').textContent = errorText(error);
+    } finally {
+      $('authButton').disabled = false;
+    }
+  });
+
+  async function enterApp() {
+    const { data: authData } = await db.auth.getUser();
+    user = authData.user;
+
+    if (!user) {
+      $('auth').classList.remove('hidden');
+      $('app').classList.add('hidden');
+      return;
+    }
+
+    $('auth').classList.add('hidden');
+    $('app').classList.remove('hidden');
+    $('messages').innerHTML = '<div id="empty">Загружаю...</div>';
+
+    const { data, error } = await db
+      .from('profiles')
+      .select('id, username, display_name')
+      .eq('id', user.id)
+      .maybeSingle();
+
+    if (error) {
+      status('Ошибка профиля: ' + error.message);
+      return;
+    }
+
+    profile = data;
+
+    if (!profile) {
+      status('Профиль пока не появился. Обнови страницу через несколько секунд.');
+      $('me').textContent = 'ID: ' + user.id;
+      return;
+    }
+
+    $('me').innerHTML = '';
+    const name = document.createElement('div');
+    name.textContent = profile.display_name || 'Пользователь';
+    const id = document.createElement('div');
+    id.textContent = 'Твой ID: ' + profile.username;
+    id.style.marginTop = '5px';
+    id.style.userSelect = 'text';
+    $('me').append(name, id);
+
+    $('userSearch').value = '';
+    $('searchResult').innerHTML = '';
+    await loadChats();
+  }
+
+  $('logout').addEventListener('click', async () => {
+    if (messageChannel) {
+      await db.removeChannel(messageChannel);
+      messageChannel = null;
+    }
+    await db.auth.signOut();
+    user = null;
+    profile = null;
+    currentConversation = null;
+    $('app').classList.add('hidden');
+    $('auth').classList.remove('hidden');
+    $('authMessage').textContent = 'Ты вышел из аккаунта.';
+  });
+
+  async function findProfile() {
+    const query = $('userSearch').value.trim();
+    if (!query) {
+      $('searchResult').textContent = 'Введи ID пользователя.';
+      return;
+    }
+
+    $('searchButton').disabled = true;
+    $('searchResult').textContent = 'Ищу пользователя...';
+
+    try {
+      let result;
+
+      if (/^[0-9a-f]{8}-[0-9a-f-]{27,}$/i.test(query)) {
+        result = await db.from('profiles')
+          .select('id, username, display_name')
+          .eq('id', query)
+          .maybeSingle();
+      } else {
+        result = await db.from('profiles')
+          .select('id, username, display_name')
+          .eq('username', query)
+          .maybeSingle();
+      }
+
+      if (result.error) throw result.error;
+      const found = result.data;
+
+      $('searchResult').innerHTML = '';
+
+      if (!found) {
+        $('searchResult').textContent = 'Пользователь не найден. Проверь ID.';
+        return;
+      }
+
+      if (found.id === user.id) {
+        $('searchResult').textContent = 'Это твой собственный аккаунт.';
+        return;
+      }
+
+      const box = document.createElement('div');
+      box.className = 'result';
+
+      const title = document.createElement('strong');
+      title.textContent = found.display_name || 'Пользователь';
+
+      const userId = document.createElement('div');
+      userId.className = 'small';
+      userId.style.margin = '7px 0';
+      userId.textContent = 'ID: ' + found.username;
+
+      const open = document.createElement('button');
+      open.type = 'button';
+      open.textContent = 'Написать сообщение';
+      open.style.width = '100%';
+      open.addEventListener('click', () => openDirectChat(found));
+
+      box.append(title, userId, open);
+      $('searchResult').append(box);
+    } catch (error) {
+      $('searchResult').textContent = 'Ошибка поиска: ' + errorText(error);
+    } finally {
+      $('searchButton').disabled = false;
+    }
+  }
+
+  $('searchButton').addEventListener('click', findProfile);
+  $('userSearch').addEventListener('keydown', event => {
+    if (event.key === 'Enter') {
+      event.preventDefault();
+      findProfile();
+    }
+  });
+
+  async function openDirectChat(otherProfile) {
+    status('Открываю чат...');
+    try {
+      const { data, error } = await db.rpc('create_direct_conversation', {
+        target_user: otherProfile.id
+      });
+
+      if (error) throw error;
+
+      let conversationId = data;
+
+      // Поддержка ответа RPC в виде UUID или объекта.
+      if (Array.isArray(conversationId)) {
+        conversationId = conversationId[0]?.id || conversationId[0]?.conversation_id;
+      }
+      if (conversationId && typeof conversationId === 'object') {
+        conversationId = conversationId.id || conversationId.conversation_id;
+      }
+
+      if (!conversationId) {
+        throw new Error('Сервер не вернул ID чата.');
+      }
+
+      currentOtherProfile = otherProfile;
+      currentConversation = conversationId;
+      $('chatHeader').textContent = otherProfile.display_name || 'Личный чат';
+      $('sendForm').classList.remove('hidden');
+
+      await showMessages(conversationId);
+      await loadChats();
+      subscribeToMessages(conversationId);
+      status('');
+    } catch (error) {
+      status('Не удалось открыть чат: ' + errorText(error));
+    }
+  }
+
+  async function loadChats() {
+    if (!user) return;
+
+    const { data: memberships, error } = await db
+      .from('conversation_members')
+      .select('conversation_id')
+      .eq('user_id', user.id);
+
+    if (error) {
+      status('Не удалось загрузить чаты: ' + error.message);
+      return;
+    }
+
+    const ids = [...new Set((memberships || []).map(item => item.conversation_id))];
+    $('chatList').innerHTML = '';
+
+    if (!ids.length) {
+      const note = document.createElement('div');
+      note.className = 'small';
+      note.style.padding = '16px';
+      note.textContent = 'Пока нет чатов. Найди человека по ID.';
+      $('chatList').append(note);
+      return;
+    }
+
+    const { data: allMembers, error: memberError } = await db
+      .from('conversation_members')
+      .select('conversation_id, user_id')
+      .in('conversation_id', ids);
+
+    if (memberError) {
+      status('Не удалось загрузить участников: ' + memberError.message);
+      return;
+    }
+
+    const otherIds = [...new Set((allMembers || [])
+      .filter(item => item.user_id !== user.id)
+      .map(item => item.user_id))];
+
+    let profilesById = {};
+
+    if (otherIds.length) {
+      const { data: people, error: profilesError } = await db
+        .from('profiles')
+        .select('id, username, display_name')
+        .in('id', otherIds);
+
+      if (profilesError) {
+        status('Не удалось загрузить имена: ' + profilesError.message);
+        return;
+      }
+
+      for (const person of people || []) profilesById[person.id] = person;
+    }
+
+    for (const conversationId of ids) {
+      const member = (allMembers || []).find(item =>
+        item.conversation_id === conversationId && item.user_id !== user.id
+      );
+      const other = member ? profilesById[member.user_id] : null;
+
+      const item = document.createElement('div');
+      item.className = 'chatitem' +
+        (currentConversation === conversationId ? ' active' : '');
+
+      const title = document.createElement('strong');
+      title.textContent = other?.display_name || 'Личный чат';
+
+      const sub = document.createElement('div');
+      sub.className = 'small';
+      sub.textContent = other?.username || 'Участник чата';
+
+      item.append(title, sub);
+      item.addEventListener('click', async () => {
+        currentConversation = conversationId;
+        currentOtherProfile = other;
+        $('chatHeader').textContent = other?.display_name || 'Личный чат';
+        $('sendForm').classList.remove('hidden');
+        await showMessages(conversationId);
+        subscribeToMessages(conversationId);
+        await loadChats();
+      });
+
+      $('chatList').append(item);
+    }
+  }
+
+  async function showMessages(conversationId) {
+    if (loadingMessages) return;
+    loadingMessages = true;
+    $('messages').innerHTML = '';
+
+    try {
+      const { data, error } = await db
+        .from('messages')
+        .select('id, conversation_id, sender_id, content, created_at')
+        .eq('conversation_id', conversationId)
+        .order('created_at', { ascending: true })
+        .limit(200);
+
+      if (error) throw error;
+
+      $('messages').innerHTML = '';
+
+      if (!data || data.length === 0) {
+        const empty = document.createElement('div');
+        empty.id = 'empty';
+        empty.textContent = 'Это начало вашей переписки. Напиши первое сообщение!';
+        $('messages').append(empty);
+      } else {
+        for (const message of data) appendMessage(message);
+      }
+
+      scrollMessages();
+    } catch (error) {
+      $('messages').innerHTML = '';
+      const note = document.createElement('div');
+      note.id = 'empty';
+      note.textContent = 'Не удалось загрузить сообщения: ' + errorText(error);
+      $('messages').append(note);
+    } finally {
+      loadingMessages = false;
+    }
+  }
+
+  function appendMessage(message) {
+    if (!message || message.conversation_id !== currentConversation) return;
+
+    const empty = $('empty');
+    if (empty) empty.remove();
+
+    if (message.id && document.querySelector('[data-message-id="' + message.id + '"]')) {
+      return;
+    }
+
+    const bubble = document.createElement('div');
+    bubble.className = 'bubble' + (message.sender_id === user.id ? ' mine' : '');
+    if (message.id) bubble.dataset.messageId = message.id;
+
+    const content = document.createElement('div');
+    content.textContent = message.content || '';
+    bubble.append(content);
+
+    if (message.created_at) {
+      const time = document.createElement('div');
+      time.className = 'time';
+      const date = new Date(message.created_at);
+      time.textContent = isNaN(date.getTime())
+        ? ''
+        : date.toLocaleString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+      bubble.append(time);
+    }
+
+    $('messages').append(bubble);
+    scrollMessages();
+  }
+
+  function scrollMessages() {
+    $('messages').scrollTop = $('messages').scrollHeight;
+  }
+
+  function subscribeToMessages(conversationId) {
+    if (messageChannel) {
+      db.removeChannel(messageChannel);
+      messageChannel = null;
+    }
+
+    messageChannel = db.channel('messages-' + conversationId + '-' + user.id)
+      .on('postgres_changes', {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'messages',
+        filter: 'conversation_id=eq.' + conversationId
+      }, payload => {
+        appendMessage(payload.new);
+      })
+      .subscribe(state => {
+        if (state === 'CHANNEL_ERROR') {
+          status('Не удалось подключить обновления сообщений. Проверь настройки Realtime в Supabase.');
+        }
+      });
+  }
+
+  $('sendForm').addEventListener('submit', async event => {
+    event.preventDefault();
+
+    const content = $('messageInput').value.trim();
+    if (!content || !currentConversation || !user) return;
+
+    $('sendButton').disabled = true;
+
+    try {
+      const { data, error } = await db
+        .from('messages')
+        .insert({
+          conversation_id: currentConversation,
+          sender_id: user.id,
+          content
+        })
+        .select('id, conversation_id, sender_id, content, created_at')
+        .single();
+
+      if (error) throw error;
+
+      appendMessage(data);
+      $('messageInput').value = '';
+      status('');
+    } catch (error) {
+      status('Не удалось отправить сообщение: ' + errorText(error));
+    } finally {
+      $('sendButton').disabled = false;
+      $('messageInput').focus();
+    }
+  });
+
+  db.auth.onAuthStateChange((event, session) => {
+    if (event === 'SIGNED_OUT') {
+      user = null;
+      profile = null;
+      currentConversation = null;
+    }
+  });
+
+  (async function start() {
+    const { data, error } = await db.auth.getSession();
+
+    if (error) {
+      $('authMessage').textContent = error.message;
+      return;
+    }
+
+    if (data.session) {
+      await enterApp();
+    } else {
+      $('auth').classList.remove('hidden');
+      $('app').classList.add('hidden');
+    }
+  })();
+})();
+</script>
+</body>
+      </html>
