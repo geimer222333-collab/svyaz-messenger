@@ -49,6 +49,9 @@
     .page-heading{font-size:21px;font-weight:800;letter-spacing:-.4px}.page-subtitle{font-size:12px;color:var(--muted);margin-top:4px}
     .top-actions{display:flex;align-items:center;gap:8px}.mobile-menu{display:none}
     .view{min-height:0;flex:1;padding:22px;overflow:auto}
+    /* Keep the selected page visible on mobile even if another CSS rule hides view containers. */
+    section.view:not([hidden]){display:block!important}
+    section.view[hidden]{display:none!important}
     .section-head{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:16px}.section-title{font-size:18px;font-weight:800;margin:0}.section-note{font-size:13px;color:var(--muted);margin-top:5px;line-height:1.5}
     .chat-workspace{display:grid;grid-template-columns:minmax(250px,330px) minmax(0,1fr);height:calc(100dvh - 143px);min-height:430px;margin:-22px}
     .chat-list-pane{border-right:1px solid var(--line);display:flex;flex-direction:column;min-width:0;min-height:0}
@@ -235,6 +238,10 @@
     }
 
     $('authSwitch').addEventListener('click', () => setAuthMode(state.authMode === 'login' ? 'signup' : 'login'));
+    ['authEmail', 'authPassword'].forEach(id => $(id).addEventListener('input', () => {
+      $('authHint').textContent = '';
+      $('authHint').style.color = '';
+    }));
     $('authForm').addEventListener('submit', async (event) => {
       event.preventDefault();
       const email = $('authEmail').value.trim();
@@ -257,7 +264,13 @@
           state.user = data.user;
           await initializeApp();
         }
-      } catch (error) { showToast(friendlyError(error), 'error'); }
+      } catch (error) {
+        console.error('Ошибка входа/регистрации:', error);
+        const message = friendlyError(error);
+        $('authHint').textContent = message;
+        $('authHint').style.color = '#b42332';
+        showToast(message, 'error');
+      }
       finally { setLoading(button, false); }
     });
 
@@ -312,7 +325,11 @@
     function navigate(viewName) {
       if (!['chats','contacts','profile','settings'].includes(viewName)) viewName = 'chats';
       state.currentView = viewName;
-      document.querySelectorAll('[data-page]').forEach(section => { section.hidden = section.dataset.page !== viewName; });
+      document.querySelectorAll('section[data-page]').forEach(section => {
+        const active = section.dataset.page === viewName;
+        section.hidden = !active;
+        section.style.display = active ? 'block' : 'none';
+      });
       document.querySelectorAll('.nav-btn[data-view]').forEach(button => button.classList.toggle('active', button.dataset.view === viewName));
       const titles = {
         chats: ['Чаты', 'Ваши личные сообщения'],
