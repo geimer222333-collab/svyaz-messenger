@@ -253,6 +253,11 @@
       setLoading(button, true, 'Подождите…');
       try {
         if (state.authMode === 'signup') {
+          // Не позволяем старой сохранённой сессии маскировать регистрацию другого аккаунта.
+          // Выход выполняется только на этом устройстве, до создания нового аккаунта.
+          const { error: signOutError } = await supabase.auth.signOut({ scope: 'local' });
+          if (signOutError) console.warn('Не удалось очистить локальную сессию перед регистрацией:', signOutError);
+          state.user = null;
           const username = $('signupUsername').value.trim();
           const displayName = $('signupDisplayName').value.trim();
           if (!validUsername(username)) throw new Error('Имя пользователя должно содержать от 3 до 20 символов: английские буквы, цифры или _.');
@@ -260,7 +265,7 @@
           const { data, error } = await supabase.auth.signUp({ email, password, options: { data: { username, display_name: displayName } } });
           if (error) throw error;
           if (data.session) { state.user = data.user; await initializeApp(); }
-          else { $('authHint').textContent = 'Регистрация отправлена. Если Supabase требует подтверждение почты, откройте письмо и подтвердите адрес, затем войдите.'; showToast('Регистрация выполнена. Проверьте почту, если требуется подтверждение.', 'success'); }
+          else { $('authHint').textContent = 'Аккаунт создан. Если включено подтверждение почты, откройте письмо, подтвердите адрес, затем войдите именно с этой почтой и паролем. Старый аккаунт не будет открыт автоматически.'; showToast('Проверьте почту для подтверждения, если оно требуется.', 'success'); }
         } else {
           const { data, error } = await supabase.auth.signInWithPassword({ email, password });
           if (error) throw error;
