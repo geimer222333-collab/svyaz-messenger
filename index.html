@@ -102,6 +102,8 @@
       <div class="brand"><div class="brand-mark">✦</div><span id="brandTitle">Связь</span></div><div id="networkStatus" class="network-status" role="status" aria-live="polite">● Связь</div>
       <div class="nav-label">МЕНЮ</div>
       <button class="nav-btn active" data-view="chats" type="button"><span class="ico">▤</span><span>Чаты</span></button>
+      <button class="nav-btn" data-view="groups" type="button"><span class="ico">👥</span><span>Группы</span></button>
+      <button class="nav-btn" data-view="stories" type="button"><span class="ico">◉</span><span>Истории</span></button>
       <button class="nav-btn" data-view="contacts" type="button"><span class="ico">♙</span><span>Контакты</span></button>
       <button class="nav-btn" data-view="profile" type="button"><span class="ico">◉</span><span>Профиль</span></button>
       <button class="nav-btn" data-view="settings" type="button"><span class="ico">⚙</span><span>Настройки</span></button>
@@ -130,7 +132,7 @@
               <button id="deleteChatButton" class="btn btn-danger" type="button" hidden>Удалить чат</button>
             </div>
             <div id="messageList" class="message-list"><div class="empty" style="margin:auto"><div class="empty-icon">💬</div>Выберите существующий чат или найдите человека в разделе «Контакты».</div></div>
-            <form id="messageForm" class="composer" hidden><textarea id="messageInput" rows="1" maxlength="5000" placeholder="Напишите сообщение…" aria-label="Текст сообщения"></textarea><button class="btn btn-primary send-btn" type="submit" aria-label="Отправить сообщение">➤</button></form>
+            <form id="messageForm" class="composer" hidden><textarea id="messageInput" rows="1" maxlength="5000" placeholder="Напишите сообщение…" aria-label="Текст сообщения"></textarea><input id="messageMediaFile" type="file" accept="image/*,video/*" aria-label="Прикрепить фото или видео" style="max-width:135px;font-size:11px"><button class="btn btn-primary send-btn" type="submit" aria-label="Отправить сообщение">➤</button></form>
           </div>
         </div>
       </section>
@@ -141,6 +143,18 @@
         <div id="contactResults" class="contact-results"><div class="empty" style="grid-column:1/-1">Откройте вкладку «Контакты», чтобы загрузить всех пользователей…</div></div>
       </section>
 
+
+      <section id="groupsView" class="view" data-page="groups" hidden>
+        <div class="section-head"><div><h2 class="section-title">Группы</h2><div class="section-note">Создавайте группы и общайтесь вместе.</div></div></div>
+        <div class="profile-card"><form id="groupCreateForm"><div class="field"><label for="groupName">Название группы</label><input id="groupName" maxlength="80" required placeholder="Например, Друзья"></div><div class="field"><label for="groupMembers">ID участников (UUID, через запятую)</label><input id="groupMembers" placeholder="ID пользователей из Supabase profiles"><small class="subtle">Можно оставить пустым и добавить участников позже через SQL.</small></div><button class="btn btn-primary" type="submit">Создать группу</button></form></div>
+        <div class="profile-card"><h3 class="section-title">Мои группы</h3><div id="groupList">Загрузка…</div></div>
+        <div class="profile-card" id="groupChatCard" hidden><h3 id="groupChatTitle" class="section-title">Групповой чат</h3><div id="groupMessages" style="max-height:300px;overflow:auto;padding:8px 0"></div><form id="groupMessageForm"><div class="field"><label for="groupMessageText">Сообщение</label><textarea id="groupMessageText" maxlength="5000" required></textarea></div><div class="field"><label for="groupMedia">Фото или видео (необязательно)</label><input id="groupMedia" type="file" accept="image/*,video/*"></div><button class="btn btn-primary" type="submit">Отправить</button></form><div class="field"><label for="addMemberId">Добавить участника по UUID</label><input id="addMemberId" placeholder="UUID из profiles"><button id="addMemberButton" class="btn btn-secondary" type="button">Добавить</button></div></div>
+      </section>
+      <section id="storiesView" class="view" data-page="stories" hidden>
+        <div class="section-head"><div><h2 class="section-title">Истории</h2><div class="section-note">Фото и видео будут доступны 24 часа.</div></div></div>
+        <div class="profile-card"><form id="storyForm"><div class="field"><label for="storyMedia">Выберите фото или видео</label><input id="storyMedia" type="file" accept="image/*,video/*" required></div><div class="field"><label for="storyCaption">Подпись (необязательно)</label><input id="storyCaption" maxlength="300" placeholder="Что нового?"></div><button class="btn btn-primary" type="submit">Опубликовать историю</button></form></div>
+        <div class="profile-card"><h3 class="section-title">Свежие истории</h3><div id="storyList">Загрузка…</div></div>
+      </section>
       <section id="profileView" class="view" data-page="profile" hidden>
         <div class="profile-layout">
           <div class="section-head"><div><h2 class="section-title">Мой профиль</h2><div class="section-note">Информация, которую видят другие пользователи.</div></div></div>
@@ -384,7 +398,7 @@
     }
 
     function navigate(viewName) {
-      if (!['chats','contacts','profile','settings'].includes(viewName)) viewName = 'chats';
+      if (!['chats','contacts','profile','settings','groups','stories'].includes(viewName)) viewName = 'chats';
       state.currentView = viewName;
       document.querySelectorAll('section[data-page]').forEach(section => {
         const active = section.dataset.page === viewName;
@@ -396,21 +410,60 @@
         chats: ['Чаты', 'Ваши личные сообщения'],
         contacts: ['Контакты', 'Поиск людей и новые переписки'],
         profile: ['Профиль', 'Управление личной информацией'],
-        settings: ['Настройки', 'Аккаунт и безопасность']
+        settings: ['Настройки', 'Аккаунт и безопасность'], groups: ['Группы', 'Общие чаты и участники'], stories: ['Истории', 'Фото и видео на 24 часа']
       };
       $('pageHeading').textContent = titles[viewName][0];
       $('pageSubtitle').textContent = titles[viewName][1];
       if (viewName === 'profile' && state.profile) setProfileToUI(state.profile);
       if (viewName === 'settings') $('settingsEmail').textContent = state.user?.email || 'Не указан';
       if (viewName === 'contacts' && state.user) loadContacts($('contactSearch').value.trim());
+      if (viewName === 'groups' && state.user) loadGroups();
+      if (viewName === 'stories' && state.user) loadStories();
     }
     document.querySelectorAll('.nav-btn[data-view]').forEach(button => button.addEventListener('click', () => navigate(button.dataset.view)));
     $('settingsToProfile').addEventListener('click', () => navigate('profile'));
     $('refreshButton').addEventListener('click', async () => {
       if (state.currentView === 'chats') await loadChats();
+      else if (state.currentView === 'groups') await loadGroups();
+      else if (state.currentView === 'stories') await loadStories();
       else if (state.currentView === 'contacts') await searchContacts($('contactSearch').value.trim());
       else { try { await loadProfile(); showToast('Данные обновлены.', 'success'); } catch (e) { showToast(friendlyError(e), 'error'); } }
     });
+
+
+    // Дополнительные функции: группы, истории и медиа. Для них требуется SQL-файл рядом.
+    let activeGroupId = null;
+    async function uploadCommunityMedia(file, folder) {
+      if (!file) return null;
+      if (!(file.type.startsWith('image/') || file.type.startsWith('video/'))) throw new Error('Выберите фото или видео.');
+      const max = file.type.startsWith('video/') ? 50*1024*1024 : 10*1024*1024;
+      if (file.size > max) throw new Error(file.type.startsWith('video/') ? 'Видео должно быть до 50 МБ.' : 'Фото должно быть до 10 МБ.');
+      const ext = (file.name.split('.').pop() || 'bin').toLowerCase().replace(/[^a-z0-9]/g,'').slice(0,8) || 'bin';
+      const path = `${state.user.id}/${folder}/${Date.now()}-${crypto.randomUUID()}.${ext}`;
+      const {error} = await supabase.storage.from('community-media').upload(path,file,{upsert:false,contentType:file.type});
+      if(error) throw error;
+      return supabase.storage.from('community-media').getPublicUrl(path).data.publicUrl;
+    }
+    async function loadGroups() {
+      if (!state.user) return;
+      const box=$('groupList'); box.textContent='Загрузка групп…';
+      try {
+        const {data: memberships,error:mErr}=await supabase.from('group_members').select('group_id, role').eq('user_id',state.user.id);
+        if(mErr) throw mErr;
+        if(!memberships?.length){box.textContent='Пока нет групп. Создайте первую выше.';return;}
+        const ids=memberships.map(x=>x.group_id);
+        const {data: groups,error}=await supabase.from('groups').select('id,name,created_at').in('id',ids).order('created_at',{ascending:false}); if(error) throw error;
+        box.innerHTML=(groups||[]).map(g=>`<div style="display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--line)"><b>${escapeHtml(g.name)}</b><button class="btn btn-secondary" type="button" data-open-group="${g.id}">Открыть</button></div>`).join('');
+        box.querySelectorAll('[data-open-group]').forEach(b=>b.addEventListener('click',()=>openGroup(b.dataset.openGroup)));
+      } catch(e) { box.textContent='Не удалось загрузить группы: '+friendlyError(e)+'. Проверьте, что SQL настроен.'; }
+    }
+    $('groupCreateForm').addEventListener('submit',async e=>{e.preventDefault();try{const name=$('groupName').value.trim();if(!name)throw new Error('Введите название группы.');const {data:g,error}=await supabase.from('groups').insert({name,created_by:state.user.id}).select('id').single();if(error)throw error;const {error:mErr}=await supabase.from('group_members').insert({group_id:g.id,user_id:state.user.id,role:'admin'});if(mErr)throw mErr;const ids=[...new Set($('groupMembers').value.split(',').map(x=>x.trim()).filter(Boolean))].filter(x=>x!==state.user.id);if(ids.length){const {error:addErr}=await supabase.from('group_members').insert(ids.map(user_id=>({group_id:g.id,user_id,role:'member'})));if(addErr)showToast('Группа создана, но часть участников не добавлена: '+friendlyError(addErr),'error');} $('groupName').value='';$('groupMembers').value='';showToast('Группа создана.','success');await loadGroups();await openGroup(g.id);}catch(err){showToast('Не удалось создать группу: '+friendlyError(err),'error');}});
+    async function openGroup(id){activeGroupId=id;const {data:g,error}=await supabase.from('groups').select('id,name').eq('id',id).single();if(error){showToast(friendlyError(error),'error');return;} $('groupChatCard').hidden=false;$('groupChatTitle').textContent=g.name;await loadGroupMessages();}
+    async function loadGroupMessages(){if(!activeGroupId)return;const {data,error}=await supabase.from('group_messages').select('id,group_id,sender_id,content,media_url,created_at').eq('group_id',activeGroupId).order('created_at',{ascending:true}).limit(200);if(error){$('groupMessages').textContent='Не удалось загрузить сообщения: '+friendlyError(error);return;}const ids=[...new Set((data||[]).map(m=>m.sender_id))];let names={};if(ids.length){const {data:p}=await supabase.from('profiles').select('id,display_name,username').in('id',ids);(p||[]).forEach(x=>names[x.id]=x.display_name||x.username||'Пользователь');} $('groupMessages').innerHTML=(data||[]).map(m=>`<div style="padding:9px;margin:5px 0;background:var(--soft);border-radius:10px"><b>${escapeHtml(names[m.sender_id]||'Участник')}</b><div>${escapeHtml(m.content||'')}</div>${m.media_url? ( /\.(mp4|webm|mov)(\?|$)/i.test(m.media_url)?`<video src="${escapeHtml(m.media_url)}" controls playsinline style="max-width:100%;max-height:280px"></video>`:`<a href="${escapeHtml(m.media_url)}" target="_blank" rel="noopener"><img src="${escapeHtml(m.media_url)}" style="max-width:100%;max-height:280px;border-radius:8px"></a>`):''}<small class="subtle">${new Date(m.created_at).toLocaleString()}</small></div>`).join('')||'Пока сообщений нет.';}
+    $('groupMessageForm').addEventListener('submit',async e=>{e.preventDefault();if(!activeGroupId)return;try{const file=$('groupMedia').files[0];const media_url=file?await uploadCommunityMedia(file,'group-media'):null;const {error}=await supabase.from('group_messages').insert({group_id:activeGroupId,sender_id:state.user.id,content:$('groupMessageText').value.trim(),media_url});if(error)throw error;$('groupMessageText').value='';$('groupMedia').value='';await loadGroupMessages();}catch(err){showToast('Не удалось отправить: '+friendlyError(err),'error');}});
+    $('addMemberButton').addEventListener('click',async()=>{try{if(!activeGroupId)throw new Error('Сначала откройте группу.');const user_id=$('addMemberId').value.trim();if(!/^[0-9a-f-]{36}$/i.test(user_id))throw new Error('Введите корректный UUID пользователя.');const {error}=await supabase.from('group_members').insert({group_id:activeGroupId,user_id,role:'member'});if(error)throw error;$('addMemberId').value='';showToast('Участник добавлен.','success');}catch(e){showToast(friendlyError(e),'error');}});
+    async function loadStories(){const box=$('storyList');box.textContent='Загрузка историй…';try{const {data,error}=await supabase.from('stories').select('id,user_id,media_url,media_type,caption,created_at,expires_at').gt('expires_at',new Date().toISOString()).order('created_at',{ascending:false}).limit(100);if(error)throw error;const ids=[...new Set((data||[]).map(s=>s.user_id))];let names={};if(ids.length){const {data:p}=await supabase.from('profiles').select('id,display_name,username').in('id',ids);(p||[]).forEach(x=>names[x.id]=x.display_name||x.username||'Пользователь');}box.innerHTML=(data||[]).map(s=>`<article style="border-bottom:1px solid var(--line);padding:12px 0"><b>${escapeHtml(names[s.user_id]||'Пользователь')}</b><p>${escapeHtml(s.caption||'')}</p>${s.media_type?.startsWith('video/')?`<video src="${escapeHtml(s.media_url)}" controls playsinline style="max-width:100%;max-height:420px"></video>`:`<img src="${escapeHtml(s.media_url)}" alt="История" style="max-width:100%;max-height:420px;border-radius:12px">`}<div class="subtle">Истекает: ${new Date(s.expires_at).toLocaleString()}</div></article>`).join('')||'Пока нет активных историй.';}catch(e){box.textContent='Не удалось загрузить истории: '+friendlyError(e)+'. Проверьте SQL.';}}
+    $('storyForm').addEventListener('submit',async e=>{e.preventDefault();try{const file=$('storyMedia').files[0];if(!file)throw new Error('Выберите фото или видео.');const media_url=await uploadCommunityMedia(file,'stories');const expires_at=new Date(Date.now()+24*60*60*1000).toISOString();const {error}=await supabase.from('stories').insert({user_id:state.user.id,media_url,media_type:file.type,caption:$('storyCaption').value.trim(),expires_at});if(error)throw error;$('storyMedia').value='';$('storyCaption').value='';showToast('История опубликована на 24 часа.','success');await loadStories();}catch(err){showToast('Не удалось опубликовать: '+friendlyError(err),'error');}});
 
     async function loadChats() {
       if (!state.user) return;
