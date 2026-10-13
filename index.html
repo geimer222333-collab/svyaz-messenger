@@ -245,41 +245,70 @@
       $('authHint').textContent = '';
       $('authHint').style.color = '';
     }));
+    // Надёжная обработка формы входа/регистрации: всегда показывает статус пользователю.
     $('authForm').addEventListener('submit', async (event) => {
       event.preventDefault();
-      const email = $('authEmail').value.trim();
-      const password = $('authPassword').value;
+      event.stopPropagation();
+      const email = String($('authEmail')?.value || '').trim();
+      const password = String($('authPassword')?.value || '');
       const button = $('authSubmit');
-      setLoading(button, true, 'Подождите…');
+      const hint = $('authHint');
+      if (!email || !password) {
+        hint.textContent = 'Введите электронную почту и пароль.';
+        hint.style.color = '#b42332';
+        return;
+      }
+      setLoading(button, true, state.authMode === 'signup' ? 'Создаём аккаунт…' : 'Входим…');
+      hint.style.color = '#5962e8';
+      hint.textContent = state.authMode === 'signup' ? 'Отправляем запрос на регистрацию…' : 'Проверяем почту и пароль…';
       try {
+        if (!supabase?.auth) throw new Error('Сервис входа ещё загружается. Обновите страницу и попробуйте снова.');
         if (state.authMode === 'signup') {
-          // Не позволяем старой сохранённой сессии маскировать регистрацию другого аккаунта.
-          // Выход выполняется только на этом устройстве, до создания нового аккаунта.
-          const { error: signOutError } = await supabase.auth.signOut({ scope: 'local' });
-          if (signOutError) console.warn('Не удалось очистить локальную сессию перед регистрацией:', signOutError);
-          state.user = null;
           const username = $('signupUsername').value.trim();
           const displayName = $('signupDisplayName').value.trim();
           if (!validUsername(username)) throw new Error('Имя пользователя должно содержать от 3 до 20 символов: английские буквы, цифры или _.');
           if (!displayName) throw new Error('Введите имя, которое будет отображаться в профиле.');
-          const { data, error } = await supabase.auth.signUp({ email, password, options: { data: { username, display_name: displayName } } });
+          const { data, error } = await supabase.auth.signUp({
+            email, password,
+            options: { data: { username, display_name: displayName } }
+          });
           if (error) throw error;
-          if (data.session) { state.user = data.user; await initializeApp(); }
-          else { $('authHint').textContent = 'Аккаунт создан. Если включено подтверждение почты, откройте письмо, подтвердите адрес, затем войдите именно с этой почтой и паролем. Старый аккаунт не будет открыт автоматически.'; showToast('Проверьте почту для подтверждения, если оно требуется.', 'success'); }
+          if (data?.session && data?.user) {
+            state.user = data.user;
+            hint.textContent = 'Аккаунт создан. Открываем приложение…';
+            await initializeApp();
+          } else {
+            hint.style.color = '#16794b';
+            hint.textContent = 'Регистрация отправлена. Откройте письмо Supabase и подтвердите почту, затем вернитесь и нажмите «Войти».';
+            showToast('Проверьте почту и подтвердите адрес.', 'success');
+            setAuthMode('login');
+            $('authEmail').value = email;
+            $('authPassword').value = '';
+            hint.style.color = '#16794b';
+            hint.textContent = 'Почта для регистрации: ' + email + '. Подтвердите её по ссылке в письме, затем введите пароль и нажмите «Войти».';
+          }
         } else {
           const { data, error } = await supabase.auth.signInWithPassword({ email, password });
           if (error) throw error;
+          if (!data?.user) throw new Error('Supabase не вернул пользователя. Попробуйте ещё раз.');
           state.user = data.user;
+          hint.style.color = '#16794b';
+          hint.textContent = 'Вход выполнен. Загружаем ваши чаты…';
           await initializeApp();
         }
       } catch (error) {
         console.error('Ошибка входа/регистрации:', error);
-        const message = friendlyError(error);
-        $('authHint').textContent = message;
-        $('authHint').style.color = '#b42332';
+        const raw = String(error?.message || error || 'Неизвестная ошибка');
+        let message = friendlyError(error);
+        if (/invalid login credentials/i.test(raw)) message = 'Неверная почта или пароль. Проверьте данные и подтвердите почту, если это новый аккаунт.';
+        else if (/email not confirmed/i.test(raw)) message = 'Почта ещё не подтверждена. Откройте письмо Supabase и нажмите ссылку подтверждения.';
+        else if (/failed to fetch|networkerror|load failed/i.test(raw)) message = 'Не удалось связаться с Supabase. Проверьте интернет и попробуйте снова.';
+        hint.textContent = message;
+        hint.style.color = '#b42332';
         showToast(message, 'error');
+      } finally {
+        setLoading(button, false);
       }
-      finally { setLoading(button, false); }
     });
 
     function verifiedMark(userId) {
