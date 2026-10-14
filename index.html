@@ -400,6 +400,7 @@
       $('settingsEmail').textContent = state.user.email || 'Не указан';
       navigate('chats');
       await loadChats();
+      updateNotificationStatus();
       startLiveUpdates();
     }
 
@@ -514,14 +515,37 @@
         (allMembers || []).forEach(m => { if (!cmap.has(m.conversation_id)) cmap.set(m.conversation_id, []); cmap.get(m.conversation_id).push(m); });
         const lastmap = new Map();
         (recentMessages || []).forEach(m => { if (!lastmap.has(m.conversation_id)) lastmap.set(m.conversation_id, m); });
-        state.chats = (conversations || []).map(conversation => {
+        const rawChats = (conversations || []).map(conversation => {
           const members = cmap.get(conversation.id) || [];
           const otherMembers = members.filter(m => m.user_id !== state.user.id);
           const other = otherMembers.length ? pmap.get(otherMembers[0].user_id) : null;
           const isGroup = otherMembers.length > 1 || Boolean(conversation.is_group);
           const name = isGroup ? (conversation.title || 'Групповой чат') : (other?.display_name || other?.username || 'Пользователь');
-          return { id: conversation.id, raw: conversation, other, members, name, username: other?.username || '', avatar_url: other?.avatar_url || '', last: lastmap.get(conversation.id) || null };
-        }).sort((a,b) => String(b.last?.created_at || b.raw.created_at || '').localeCompare(String(a.last?.created_at || a.raw.created_at || '')));
+          return { id: conversation.id, raw: conversation, other, members, name, username: other?.username || '', avatar_url: other?.avatar_url || '', last: lastmap.get(conversation.id) || null, isGroup };
+        });
+
+        // Один человек = один пункт в списке. Старые дубликаты личных
+        // conversation объединяем визуально, группы оставляем отдельными.
+        const uniqueDirect = new Map();
+        const uniqueChats = [];
+        rawChats
+          .sort((a,b) => String(b.last?.created_at || b.raw.created_at || '').localeCompare(String(a.last?.created_at || a.raw.created_at || '')))
+          .forEach(chat => {
+            if (chat.isGroup || !chat.other?.id) {
+              uniqueChats.push(chat);
+              return;
+            }
+            const key = String(chat.other.id);
+            if (!uniqueDirect.has(key)) {
+              uniqueDirect.set(key, chat);
+              uniqueChats.push(chat);
+            }
+          });
+
+        state.chats = uniqueChats.sort((a,b) =>
+          String(b.last?.created_at || b.raw.created_at || '')
+            .localeCompare(String(a.last?.created_at || a.raw.created_at || ''))
+        );
         renderChats();
         if (state.selectedChatId && !state.chats.some(c => c.id === state.selectedChatId)) clearSelectedChat();
         if (state.selectedChatId) {
@@ -712,7 +736,7 @@
       // Don't interrupt if the user is already viewing this conversation while the page is visible.
       if (!document.hidden && state.selectedChatId === message.conversation_id && state.currentView === 'chats') return;
       const chat = state.chats.find(c => c.id === message.conversation_id);
-      const sender = chat?.display_name || chat?.username || 'Новое сообщение';
+      const sender = chat?.name || chat?.username || 'Новое сообщение';
       const body = String(message.content || '').trim() || 'Отправлено фото или видео';
       try {
         const notice = new Notification('Связь · ' + sender, {
