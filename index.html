@@ -102,9 +102,8 @@
       <div class="brand"><div class="brand-mark">✦</div><span id="brandTitle">Связь</span></div><div id="networkStatus" class="network-status" role="status" aria-live="polite">● Связь</div>
       <div class="nav-label">МЕНЮ</div>
       <button class="nav-btn active" data-view="chats" type="button"><span class="ico">▤</span><span>Чаты</span></button>
-      <button class="nav-btn" data-view="groups" type="button"><span class="ico">👥</span><span>Группы</span></button>
       <button class="nav-btn" data-view="stories" type="button"><span class="ico">◉</span><span>Истории</span></button>
-      <button class="nav-btn" data-view="contacts" type="button"><span class="ico">♙</span><span>Контакты</span></button>
+      <button class="nav-btn" data-view="contacts" type="button"><span class="ico">♙</span><span>Друзья</span></button>
       <button class="nav-btn" data-view="profile" type="button"><span class="ico">◉</span><span>Профиль</span></button>
       <button class="nav-btn" data-view="settings" type="button"><span class="ico">⚙</span><span>Настройки</span></button>
       <div class="sidebar-bottom">
@@ -121,7 +120,7 @@
       <section id="chatsView" class="view" data-page="chats">
         <div id="chatWorkspace" class="chat-workspace">
           <div id="chatListPane" class="chat-list-pane">
-            <div class="chat-list-top"><h2 class="section-title">Сообщения</h2><input id="chatSearch" class="search-input" type="search" placeholder="Найти чат…" aria-label="Найти чат"></div>
+            <div class="chat-list-top"><div class="chat-title-row"><h2 class="section-title">Сообщения</h2><button class="btn btn-secondary" type="button" data-view="groups">＋ Группы</button></div><input id="chatSearch" class="search-input" type="search" placeholder="Поиск по сообщениям…" aria-label="Найти чат"></div>
             <div id="chatList" class="chat-list"><div class="empty"><div class="empty-icon">✉️</div>Загружаем чаты…</div></div>
           </div>
           <div id="messagePane" class="message-pane">
@@ -408,7 +407,7 @@
       document.querySelectorAll('.nav-btn[data-view]').forEach(button => button.classList.toggle('active', button.dataset.view === viewName));
       const titles = {
         chats: ['Чаты', 'Ваши личные сообщения'],
-        contacts: ['Контакты', 'Поиск людей и новые переписки'],
+        contacts: ['Друзья', 'Найдите друзей и начните общение'],
         profile: ['Профиль', 'Управление личной информацией'],
         settings: ['Настройки', 'Аккаунт и безопасность'], groups: ['Группы', 'Общие чаты и участники'], stories: ['Истории', 'Фото и видео на 24 часа']
       };
@@ -420,7 +419,7 @@
       if (viewName === 'groups' && state.user) loadGroups();
       if (viewName === 'stories' && state.user) loadStories();
     }
-    document.querySelectorAll('.nav-btn[data-view]').forEach(button => button.addEventListener('click', () => navigate(button.dataset.view)));
+    document.querySelectorAll('[data-view]').forEach(button => button.addEventListener('click', () => navigate(button.dataset.view)));
     $('settingsToProfile').addEventListener('click', () => navigate('profile'));
     $('refreshButton').addEventListener('click', async () => {
       if (state.currentView === 'chats') await loadChats();
