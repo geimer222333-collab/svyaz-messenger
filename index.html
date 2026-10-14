@@ -177,6 +177,7 @@
           <div class="profile-card">
             <h3 class="section-title" style="font-size:16px;margin:0 0 7px">Аккаунт</h3>
             <div class="setting-row"><div><div class="setting-label">Электронная почта</div><div id="settingsEmail" class="setting-desc">Загружаем адрес…</div></div><span>✉️</span></div>
+            <div class="setting-row"><div><div class="setting-label">Уведомления о сообщениях</div><div id="notificationStatus" class="setting-desc">Разрешите уведомления, чтобы видеть новые сообщения.</div></div><button id="enableNotifications" class="btn btn-secondary" type="button">Включить</button></div>
             <div class="setting-row"><div><div class="setting-label">Профиль</div><div class="setting-desc">Измените имя, имя пользователя или фотографию.</div></div><button id="settingsToProfile" class="btn btn-secondary" type="button">Открыть</button></div>
           </div>
           <div class="profile-card">
@@ -641,6 +642,73 @@
       }
     }
 
+    function updateNotificationStatus() {
+      const status = $('notificationStatus');
+      const button = $('enableNotifications');
+      if (!status || !button) return;
+      if (!('Notification' in window)) {
+        status.textContent = 'Этот браузер не поддерживает уведомления.';
+        button.disabled = true;
+      } else if (Notification.permission === 'granted') {
+        status.textContent = 'Уведомления разрешены на этом устройстве.';
+        button.textContent = 'Включено';
+        button.disabled = true;
+      } else if (Notification.permission === 'denied') {
+        status.textContent = 'Уведомления запрещены в настройках браузера. Разрешите их для этого сайта.';
+        button.textContent = 'Как включить?';
+        button.disabled = false;
+      } else {
+        status.textContent = 'Нажмите «Включить» и разрешите уведомления в браузере.';
+        button.textContent = 'Включить';
+        button.disabled = false;
+      }
+    }
+
+    async function enableBrowserNotifications() {
+      if (!('Notification' in window)) {
+        showToast('Этот браузер не поддерживает уведомления.', 'error');
+        return;
+      }
+      if (Notification.permission === 'denied') {
+        showToast('Откройте настройки сайта в браузере и разрешите уведомления.', 'error');
+        updateNotificationStatus();
+        return;
+      }
+      try {
+        const permission = await Notification.requestPermission();
+        updateNotificationStatus();
+        if (permission === 'granted') showToast('Уведомления включены.', 'success');
+        else showToast('Разрешение на уведомления не выдано.', 'error');
+      } catch (e) {
+        showToast('Не удалось включить уведомления в этом браузере.', 'error');
+      }
+    }
+
+    function notifyIncomingMessage(message) {
+      if (!message || !state.user || message.sender_id === state.user.id) return;
+      if (!('Notification' in window) || Notification.permission !== 'granted') return;
+      // Don't interrupt if the user is already viewing this conversation while the page is visible.
+      if (!document.hidden && state.selectedChatId === message.conversation_id && state.currentView === 'chats') return;
+      const chat = state.chats.find(c => c.id === message.conversation_id);
+      const sender = chat?.display_name || chat?.username || 'Новое сообщение';
+      const body = String(message.content || '').trim() || 'Отправлено фото или видео';
+      try {
+        const notice = new Notification('Связь · ' + sender, {
+          body: body.slice(0, 180),
+          tag: 'svyaz-message-' + message.id,
+          icon: state.profile?.avatar_url || undefined
+        });
+        notice.onclick = () => {
+          window.focus();
+          if (chat) openChat(chat.id);
+          notice.close();
+        };
+      } catch (e) { console.warn('Browser notification failed:', e); }
+    }
+
+    $('enableNotifications')?.addEventListener('click', enableBrowserNotifications);
+    updateNotificationStatus();
+
     function startLiveUpdates() {
       if (!state.user) return;
       if (state.liveChannel) { supabase.removeChannel(state.liveChannel); state.liveChannel = null; }
@@ -657,6 +725,7 @@
         .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'conversation_members', filter: 'user_id=eq.' + userId }, () => loadChats())
         .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, payload => {
           const message = payload.new;
+          notifyIncomingMessage(message);
           if (message && message.conversation_id === state.selectedChatId) {
             if (appendMessageIfNew(message)) scrollMessagesToBottom();
           }
