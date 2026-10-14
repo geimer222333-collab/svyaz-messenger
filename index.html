@@ -235,7 +235,7 @@
       if (/invalid login credentials/i.test(msg)) return 'Неверная почта или пароль.';
       if (/email not confirmed/i.test(msg)) return 'Подтвердите электронную почту по ссылке из письма.';
       if (/username/i.test(msg) && /duplicate|unique/i.test(msg)) return 'Это имя пользователя уже занято.';
-      if (/row-level security|permission denied|not allowed/i.test(msg)) return 'Нет разрешения в Supabase. Проверьте политики RLS для этой таблицы.';
+      if (/row-level security|permission denied|not allowed/i.test(msg)) return 'Supabase отклонил запрос: ' + msg;
       if (/Failed to fetch|NetworkError|Load failed/i.test(msg)) return 'Нет соединения с сервером. Проверьте интернет и настройки Supabase.';
       return msg;
     }
@@ -339,13 +339,13 @@
 
     async function loadAdminIds() {
       try {
-        const { data, error } = await supabase.from('app_admins').select('user_id');
+        const { data, error } = await supabase.from('profiles').select('id').eq('is_verified', true);
         if (error) throw error;
-        state.adminIds = new Set((data || []).map(row => String(row.user_id)));
+        state.adminIds = new Set((data || []).map(row => String(row.id)));
       } catch (error) {
-        // If the admin table has not been installed yet, fail closed: do not show a forged badge.
+        // The current user's profile still has is_verified loaded directly.
         state.adminIds = new Set();
-        console.warn('Admin badge list unavailable; run the supplied Supabase SQL setup.', error);
+        console.warn('Could not load verified profile IDs:', error);
       }
     }
 
