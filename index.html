@@ -206,7 +206,7 @@
     const SUPABASE_ANON_KEY = 'sb_publishable_YI45md4z0v49nU5cvJuibA_SOErCNba';
 
     const $ = (id) => document.getElementById(id);
-    const state = { user: null, profile: null, adminIds: new Set(), currentView: 'chats', chats: [], selectedChatId: null, selectedChat: null, messagesChannel: null, liveTimer: null, messageTimer: null, authMode: 'login', toastTimer: null, contactTimer: null, chatTimer: null, isLoadingContacts: false, isLoadingChats: false, isSyncingMessages: false, feedFilter: 'all', feed: [] };
+    const state = { user: null, profile: null, adminIds: new Set(), currentView: 'chats', chats: [], selectedChatId: null, selectedChat: null, messagesChannel: null, liveChannel: null, liveTimer: null, messageTimer: null, feedChannel: null, authMode: 'login', toastTimer: null, contactTimer: null, chatTimer: null, isLoadingContacts: false, isLoadingChats: false, isSyncingMessages: false, feedFilter: 'all', feed: [] };
     let supabase;
 
     function escapeHtml(value) {
@@ -235,7 +235,7 @@
       if (/invalid login credentials/i.test(msg)) return 'Неверная почта или пароль.';
       if (/email not confirmed/i.test(msg)) return 'Подтвердите электронную почту по ссылке из письма.';
       if (/username/i.test(msg) && /duplicate|unique/i.test(msg)) return 'Это имя пользователя уже занято.';
-      if (/row-level security|permission denied|not allowed/i.test(msg)) return 'Supabase отклонил запрос: ' + msg;
+      if (/row-level security|permission denied|not allowed/i.test(msg)) return 'Нет разрешения в Supabase. Проверьте политики RLS для этой таблицы.';
       if (/Failed to fetch|NetworkError|Load failed/i.test(msg)) return 'Нет соединения с сервером. Проверьте интернет и настройки Supabase.';
       return msg;
     }
@@ -330,22 +330,20 @@
       }
     });
 
-    function verifiedMark(userId, profile = null) {
-      const isVerified = profile?.is_verified === true || (userId && state.adminIds.has(String(userId)));
-      return isVerified
-        ? '<span class="verified-badge" title="Проверенный профиль Связи" aria-label="Проверенный профиль">✓</span>'
-        : '';
+    function verifiedMark(userId, profile) {
+      const verified = Boolean(profile?.is_verified) || (userId && state.adminIds.has(String(userId)));
+      return verified ? '<span class="verified-badge" title="Проверенный профиль Связи" aria-label="Проверенный профиль">✓</span>' : '';
     }
 
     async function loadAdminIds() {
       try {
-        const { data, error } = await supabase.from('profiles').select('id').eq('is_verified', true);
+        const { data, error } = await supabase.from('app_admins').select('user_id');
         if (error) throw error;
-        state.adminIds = new Set((data || []).map(row => String(row.id)));
+        state.adminIds = new Set((data || []).map(row => String(row.user_id)));
       } catch (error) {
-        // The current user's profile still has is_verified loaded directly.
+        // If the admin table has not been installed yet, fail closed: do not show a forged badge.
         state.adminIds = new Set();
-        console.warn('Could not load verified profile IDs:', error);
+        console.warn('Admin badge list unavailable; run the supplied Supabase SQL setup.', error);
       }
     }
 
@@ -480,12 +478,12 @@
     // ========================= ЛЕНТА =========================
     function feedTime(s){const d=new Date(s);return Number.isNaN(d.getTime())?'':d.toLocaleString([], {day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});}
     function feedMedia(post){const u=String(post.media_url||'');if(!u)return '';if(String(post.media_type||'').startsWith('video/'))return `<video class="post-media" src="${escapeHtml(u)}" controls playsinline preload="metadata"></video>`;return `<img class="post-media" src="${escapeHtml(u)}" alt="Публикация" loading="lazy">`;}
-    async function loadFeed(){if(!state.user)return;const box=$('feedList');box.innerHTML='<div class="feed-empty">Загружаем ленту…</div>';try{const {data:posts,error}=await supabase.from('posts').select('id,user_id,author_id,content,text,media_url,media_type,created_at').order('created_at',{ascending:false}).limit(100);if(error)throw error;let list=(posts||[]).map(p=>({...p,user_id:p.user_id||p.author_id,content:p.content??p.text??''}));if(state.feedFilter==='mine')list=list.filter(p=>p.user_id===state.user.id);const ids=[...new Set(list.map(p=>p.user_id).filter(Boolean))];const pids=list.map(p=>p.id);let profiles=[];if(ids.length){const r=await supabase.from('profiles').select('id,username,display_name,avatar_url,is_verified').in('id',ids);if(r.error)throw r.error;profiles=r.data||[];}let likes=[],comments=[],reposts=[];if(pids.length){const [a,b,c]=await Promise.all([supabase.from('post_likes').select('post_id,user_id').in('post_id',pids),supabase.from('post_comments').select('id,post_id,user_id,content,created_at').in('post_id',pids).order('created_at',{ascending:true}),supabase.from('post_reposts').select('post_id,user_id').in('post_id',pids)]);if(a.error)throw a.error;if(b.error)throw b.error;if(c.error)throw c.error;likes=a.data||[];comments=b.data||[];reposts=c.data||[];}const cids=[...new Set(comments.map(x=>x.user_id))].filter(x=>!ids.includes(x));if(cids.length){const r=await supabase.from('profiles').select('id,username,display_name,avatar_url,is_verified').in('id',cids);if(r.error)throw r.error;profiles.push(...(r.data||[]));}const pm=new Map(profiles.map(x=>[x.id,x]));const lc=new Map(),rc=new Map(),liked=new Set();likes.forEach(x=>{lc.set(x.post_id,(lc.get(x.post_id)||0)+1);if(x.user_id===state.user.id)liked.add(x.post_id)});reposts.forEach(x=>rc.set(x.post_id,(rc.get(x.post_id)||0)+1));const cm=new Map();comments.forEach(x=>{if(!cm.has(x.post_id))cm.set(x.post_id,[]);cm.get(x.post_id).push(x)});state.feed=list.map(p=>({...p,profile:pm.get(p.user_id)||{},pmap:pm,likes:lc.get(p.id)||0,liked:liked.has(p.id),reposts:rc.get(p.id)||0,comments:cm.get(p.id)||[]}));renderFeed();}catch(e){console.error('Feed error details:',e);box.innerHTML=`<div class="feed-empty">Не удалось загрузить ленту.<br>${escapeHtml(friendlyError(e))}<br><button id="retryFeed" class="btn btn-secondary" style="margin-top:12px" type="button">Повторить</button></div>`;$('retryFeed')?.addEventListener('click',loadFeed);}}
-    function renderFeed(){const box=$('feedList');if(!state.feed.length){box.innerHTML='<div class="feed-empty">📰<br>Пока нет публикаций. Будьте первым!</div>';return;}box.innerHTML=state.feed.map(p=>{const pr=p.profile||{},name=pr.display_name||pr.username||'Пользователь';const ch=(p.comments||[]).slice(-10).map(c=>{const cp=p.pmap.get(c.user_id)||{},cn=cp.display_name||cp.username||'Пользователь';return `<div class="comment">${avatarMarkup(cp)}<div class="comment-body"><div class="comment-name">${escapeHtml(cn)}</div><div class="comment-text">${escapeHtml(c.content)}</div></div></div>`}).join('');return `<article class="post-card"><div class="post-head">${avatarMarkup(pr)}<div class="post-author"><div class="post-author-name">${escapeHtml(name)}${verifiedMark(pr.id, pr)}</div><div class="post-time">${escapeHtml(feedTime(p.created_at))}</div></div><button class="post-menu" type="button">⋮</button></div>${p.content?`<div class="post-text">${escapeHtml(p.content)}</div>`:''}${feedMedia(p)}<div class="post-stats"><span>❤️ ${p.likes}</span><span>💬 ${p.comments.length}</span><span>↗️ ${p.reposts}</span></div><div class="post-buttons"><button class="post-action ${p.liked?'liked':''}" data-feed="like" data-id="${p.id}" type="button">${p.liked?'♥':'♡'} Лайк</button><button class="post-action" data-feed="comment" data-id="${p.id}" type="button">💬 Комментировать</button><button class="post-action" data-feed="repost" data-id="${p.id}" type="button">↗ Поделиться</button></div><div class="comments"><div class="comment-list">${ch}</div><form class="comment-form" data-comment="${p.id}"><input maxlength="1000" placeholder="Написать комментарий…"><button class="btn btn-secondary" type="submit">Отправить</button></form></div></article>`}).join('');box.querySelectorAll('[data-feed="like"]').forEach(b=>b.onclick=()=>toggleLike(b.dataset.id));box.querySelectorAll('[data-feed="comment"]').forEach(b=>b.onclick=()=>box.querySelector(`[data-comment="${CSS.escape(b.dataset.id)}"] input`)?.focus());box.querySelectorAll('[data-feed="repost"]').forEach(b=>b.onclick=()=>repost(b.dataset.id));box.querySelectorAll('[data-comment]').forEach(f=>f.onsubmit=e=>commentPost(e,f.dataset.comment));}
+    async function loadFeed(silent=false){if(!state.user)return;const box=$('feedList');if(!silent)box.innerHTML='<div class="feed-empty">Загружаем ленту…</div>';try{let q=supabase.from('posts').select('id,user_id,content,media_url,media_type,created_at').order('created_at',{ascending:false}).limit(100);if(state.feedFilter==='mine')q=q.eq('user_id',state.user.id);const {data:posts,error}=await q;if(error)throw error;const list=posts||[];const ids=[...new Set(list.map(p=>p.user_id))];const pids=list.map(p=>p.id);let profiles=[];if(ids.length){const r=await supabase.from('profiles').select('id,username,display_name,avatar_url,is_verified').in('id',ids);if(r.error)throw r.error;profiles=r.data||[];}let likes=[],comments=[],reposts=[];if(pids.length){const [a,b,c]=await Promise.all([supabase.from('post_likes').select('post_id,user_id').in('post_id',pids),supabase.from('post_comments').select('id,post_id,user_id,content,text,created_at').in('post_id',pids).order('created_at',{ascending:true}),supabase.from('post_reposts').select('post_id,user_id').in('post_id',pids)]);if(a.error)throw a.error;if(b.error)throw b.error;if(c.error)throw c.error;likes=a.data||[];comments=b.data||[];reposts=c.data||[];}const cids=[...new Set(comments.map(x=>x.user_id))].filter(x=>!ids.includes(x));if(cids.length){const r=await supabase.from('profiles').select('id,username,display_name,avatar_url,is_verified').in('id',cids);if(r.error)throw r.error;profiles.push(...(r.data||[]));}const pm=new Map(profiles.map(x=>[x.id,x]));const lc=new Map(),rc=new Map(),liked=new Set();likes.forEach(x=>{lc.set(x.post_id,(lc.get(x.post_id)||0)+1);if(x.user_id===state.user.id)liked.add(x.post_id)});reposts.forEach(x=>rc.set(x.post_id,(rc.get(x.post_id)||0)+1));const cm=new Map();comments.forEach(x=>{if(!cm.has(x.post_id))cm.set(x.post_id,[]);cm.get(x.post_id).push(x)});state.feed=list.map(p=>({...p,profile:pm.get(p.user_id)||{},pmap:pm,likes:lc.get(p.id)||0,liked:liked.has(p.id),reposts:rc.get(p.id)||0,comments:cm.get(p.id)||[]}));renderFeed();}catch(e){box.innerHTML=`<div class="feed-empty">Не удалось загрузить ленту.<br>${escapeHtml(friendlyError(e))}<br><button id="retryFeed" class="btn btn-secondary" style="margin-top:12px" type="button">Повторить</button></div>`;$('retryFeed')?.addEventListener('click',loadFeed);}}
+    function renderFeed(){const box=$('feedList');if(!state.feed.length){box.innerHTML='<div class="feed-empty">📰<br>Пока нет публикаций. Будьте первым!</div>';return;}box.innerHTML=state.feed.map(p=>{const pr=p.profile||{},name=pr.display_name||pr.username||'Пользователь';const ch=(p.comments||[]).slice(-10).map(c=>{const cp=p.pmap.get(c.user_id)||{},cn=cp.display_name||cp.username||'Пользователь';const ct=c.content ?? c.text ?? '';return `<div class="comment">${avatarMarkup(cp)}<div class="comment-body"><div class="comment-name">${escapeHtml(cn)}${verifiedMark(cp.id, cp)}</div><div class="comment-text">${escapeHtml(ct)}</div></div></div>`}).join('');return `<article class="post-card"><div class="post-head">${avatarMarkup(pr)}<div class="post-author"><div class="post-author-name">${escapeHtml(name)}${verifiedMark(pr.id, pr)}</div><div class="post-time">${escapeHtml(feedTime(p.created_at))}</div></div><button class="post-menu" type="button">⋮</button></div>${p.content?`<div class="post-text">${escapeHtml(p.content)}</div>`:''}${feedMedia(p)}<div class="post-stats"><span>❤️ ${p.likes}</span><span>💬 ${p.comments.length}</span><span>↗️ ${p.reposts}</span></div><div class="post-buttons"><button class="post-action ${p.liked?'liked':''}" data-feed="like" data-id="${p.id}" type="button">${p.liked?'♥':'♡'} Лайк</button><button class="post-action" data-feed="comment" data-id="${p.id}" type="button">💬 Комментировать</button><button class="post-action" data-feed="repost" data-id="${p.id}" type="button">↗ Поделиться</button></div><div class="comments"><div class="comment-list">${ch}</div><form class="comment-form" data-comment="${p.id}"><input maxlength="1000" placeholder="Написать комментарий…"><button class="btn btn-secondary" type="submit">Отправить</button></form></div></article>`}).join('');box.querySelectorAll('[data-feed="like"]').forEach(b=>b.onclick=()=>toggleLike(b.dataset.id));box.querySelectorAll('[data-feed="comment"]').forEach(b=>b.onclick=()=>box.querySelector(`[data-comment="${CSS.escape(b.dataset.id)}"] input`)?.focus());box.querySelectorAll('[data-feed="repost"]').forEach(b=>b.onclick=()=>repost(b.dataset.id));box.querySelectorAll('[data-comment]').forEach(f=>f.onsubmit=e=>commentPost(e,f.dataset.comment));}
     async function toggleLike(id){try{const p=state.feed.find(x=>x.id===id);if(!p)return;if(p.liked){const r=await supabase.from('post_likes').delete().eq('post_id',id).eq('user_id',state.user.id);if(r.error)throw r.error;p.liked=false;p.likes=Math.max(0,p.likes-1)}else{const r=await supabase.from('post_likes').insert({post_id:id,user_id:state.user.id});if(r.error)throw r;p.liked=true;p.likes++}renderFeed()}catch(e){showToast('Не удалось изменить лайк: '+friendlyError(e),'error')}}
-    async function commentPost(e,id){e.preventDefault();const f=e.currentTarget,input=f.querySelector('input'),text=input.value.trim();if(!text)return;try{const r=await supabase.from('post_comments').insert({post_id:id,user_id:state.user.id,content:text}).select('id,post_id,user_id,content,created_at').single();if(r.error)throw r.error;const p=state.feed.find(x=>x.id===id);if(p)p.comments.push(r.data);input.value='';renderFeed();showToast('Комментарий добавлен.','success')}catch(x){showToast('Не удалось добавить комментарий: '+friendlyError(x),'error')}}
+    async function commentPost(e,id){e.preventDefault();const f=e.currentTarget,input=f.querySelector('input'),text=input.value.trim();if(!text)return;try{const r=await supabase.from('post_comments').insert({post_id:id,user_id:state.user.id,content:text}).select('id,post_id,user_id,content,text,created_at').single();if(r.error)throw r.error;const p=state.feed.find(x=>x.id===id);if(p)p.comments.push(r.data);input.value='';renderFeed();showToast('Комментарий добавлен.','success')}catch(x){showToast('Не удалось добавить комментарий: '+friendlyError(x),'error')}}
     async function repost(id){try{const r=await supabase.from('post_reposts').insert({post_id:id,user_id:state.user.id});if(r.error){if(/duplicate|unique/i.test(String(r.error.message||''))){showToast('Вы уже делились этой публикацией.','error');return}throw r.error}const p=state.feed.find(x=>x.id===id);if(p)p.reposts++;renderFeed();showToast('Публикация переслана.','success')}catch(e){showToast('Не удалось переслать: '+friendlyError(e),'error')}}
-    $('postForm').addEventListener('submit',async e=>{e.preventDefault();const text=$('postText').value.trim(),file=$('postMedia').files?.[0];if(!text&&!file){showToast('Добавьте текст или фото/видео.','error');return}const b=e.currentTarget.querySelector('button[type="submit"]');setLoading(b,true,'Публикуем…');try{let url=null,type=null;if(file){url=await uploadCommunityMedia(file,'posts');type=file.type}const r=await supabase.from('posts').insert({user_id:state.user.id,author_id:state.user.id,content:text||'',text:text||'',media_url:url,media_type:type||null});if(r.error)throw r.error;$('postText').value='';$('postMedia').value='';$('postPreview').innerHTML='';$('postPreview').style.display='none';showToast('Публикация размещена.','success');await loadFeed()}catch(x){showToast('Не удалось опубликовать: '+friendlyError(x),'error')}finally{setLoading(b,false)}});
+    $('postForm').addEventListener('submit',async e=>{e.preventDefault();const text=$('postText').value.trim(),file=$('postMedia').files?.[0];if(!text&&!file){showToast('Добавьте текст или фото/видео.','error');return}const b=e.currentTarget.querySelector('button[type="submit"]');setLoading(b,true,'Публикуем…');try{let url=null,type=null;if(file){url=await uploadCommunityMedia(file,'posts');type=file.type}const r=await supabase.from('posts').insert({user_id:state.user.id,author_id:state.user.id,content:text||null,media_url:url,media_type:type});if(r.error)throw r.error;$('postText').value='';$('postMedia').value='';$('postPreview').innerHTML='';$('postPreview').style.display='none';showToast('Публикация размещена.','success');await loadFeed()}catch(x){showToast('Не удалось опубликовать: '+friendlyError(x),'error')}finally{setLoading(b,false)}});
     $('postMedia').addEventListener('change',()=>{const f=$('postMedia').files?.[0],box=$('postPreview');if(!f){box.innerHTML='';box.style.display='none';return}const u=URL.createObjectURL(f);box.style.display='block';box.innerHTML=f.type.startsWith('video/')?`<video src="${u}" controls playsinline></video>`:`<img src="${u}" alt="Предпросмотр">`});
     document.querySelectorAll('[data-feed-filter]').forEach(b=>b.onclick=()=>{document.querySelectorAll('[data-feed-filter]').forEach(x=>x.classList.remove('active'));b.classList.add('active');state.feedFilter=b.dataset.feedFilter;loadFeed()});
 
@@ -505,7 +503,7 @@
         const otherIds = [...new Set((allMembers || []).map(m => m.user_id).filter(id => id && id !== state.user.id))];
         let profiles = [];
         if (otherIds.length) {
-          const { data, error } = await supabase.from('profiles').select('id, username, display_name, avatar_url, last_seen, is_verified').in('id', otherIds);
+          const { data, error } = await supabase.from('profiles').select('id, username, display_name, avatar_url, last_seen').in('id', otherIds);
           if (error) throw error;
           profiles = data || [];
         }
@@ -579,7 +577,7 @@
       }
       $('chatList').innerHTML = chats.map(chat => {
         const preview = chat.last ? (chat.last.sender_id === state.user.id ? 'Вы: ' : '') + String(chat.last.content || '') : (chat.username ? '@' + chat.username : 'Начните общение');
-        return `<button class="chat-item ${chat.id === state.selectedChatId ? 'selected' : ''}" type="button" data-chat-id="${escapeHtml(chat.id)}">${avatarMarkup(chat)}<span class="chat-item-info"><span class="chat-item-name" style="display:block">${escapeHtml(chat.name)}${!chat.isGroup ? verifiedMark(chat.other?.id, chat.other) : ''}</span><span class="chat-preview" style="display:block">${escapeHtml(preview)}</span></span><span class="chat-preview">${escapeHtml(formatTime(chat.last?.created_at || chat.raw.created_at))}</span></button>`;
+        return `<button class="chat-item ${chat.id === state.selectedChatId ? 'selected' : ''}" type="button" data-chat-id="${escapeHtml(chat.id)}">${avatarMarkup(chat)}<span class="chat-item-info"><span class="chat-item-name" style="display:block">${escapeHtml(chat.name)}</span><span class="chat-preview" style="display:block">${escapeHtml(preview)}</span></span><span class="chat-preview">${escapeHtml(formatTime(chat.last?.created_at || chat.raw.created_at))}</span></button>`;
       }).join('');
       $('chatList').querySelectorAll('[data-chat-id]').forEach(button => button.addEventListener('click', () => openChat(button.dataset.chatId)));
     }
@@ -587,7 +585,7 @@
 
     function setMessageHeader(chat) {
       const name = chat?.name || 'Выберите чат';
-      $('messageName').innerHTML = escapeHtml(name) + (chat && !chat.isGroup ? verifiedMark(chat.other?.id, chat.other) : '');
+      $('messageName').textContent = name;
       $('messageStatus').textContent = chat?.username ? '@' + chat.username : (chat ? 'Личная переписка' : 'Сообщения появятся здесь');
       $('messageAvatar').innerHTML = chat?.avatar_url && /^https:\/\//i.test(chat.avatar_url) ? `<img src="${escapeHtml(chat.avatar_url)}" alt="">` : escapeHtml(initials(name));
       $('messageForm').hidden = !chat;
@@ -756,6 +754,15 @@
     $('enableNotifications')?.addEventListener('click', enableBrowserNotifications);
     updateNotificationStatus();
 
+    let feedRefreshTimer = null;
+    function scheduleFeedRefresh() {
+      if (feedRefreshTimer) clearTimeout(feedRefreshTimer);
+      feedRefreshTimer = setTimeout(() => {
+        feedRefreshTimer = null;
+        if (state.currentView === 'feed' && state.user) loadFeed(true);
+      }, 180);
+    }
+
     function startLiveUpdates() {
       if (!state.user) return;
       if (state.liveChannel) { supabase.removeChannel(state.liveChannel); state.liveChannel = null; }
@@ -770,10 +777,10 @@
           loadAdminIds().then(() => { if (state.profile) setProfileToUI(state.profile); });
         })
         .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'conversation_members', filter: 'user_id=eq.' + userId }, () => loadChats())
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'posts' }, () => { if (state.currentView === 'feed') loadFeed(); })
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'post_likes' }, () => { if (state.currentView === 'feed') loadFeed(); })
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'post_comments' }, () => { if (state.currentView === 'feed') loadFeed(); })
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'post_reposts' }, () => { if (state.currentView === 'feed') loadFeed(); })
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'posts' }, () => { if (state.currentView === 'feed') scheduleFeedRefresh(); })
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'post_likes' }, () => { if (state.currentView === 'feed') scheduleFeedRefresh(); })
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'post_comments' }, () => { if (state.currentView === 'feed') scheduleFeedRefresh(); })
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'post_reposts' }, () => { if (state.currentView === 'feed') scheduleFeedRefresh(); })
         .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, payload => {
           const message = payload.new;
           notifyIncomingMessage(message);
@@ -846,7 +853,7 @@
       state.isLoadingContacts = true;
       const normalizedQuery = String(query || '').trim();
       try {
-        let request = supabase.from('profiles').select('id, username, display_name, avatar_url, last_seen, created_at, is_verified').neq('id', state.user.id);
+        let request = supabase.from('profiles').select('id, username, display_name, avatar_url, last_seen, created_at').neq('id', state.user.id);
         if (normalizedQuery.length) {
           // Remove PostgREST filter metacharacters before interpolating into .or().
           const safe = normalizedQuery.replace(/[,%()]/g, ' ').replace(/[\\]/g, '').trim();
@@ -860,7 +867,7 @@
           $('contactResults').innerHTML = `<div class="empty" style="grid-column:1/-1">${normalizedQuery ? 'Никого не нашли. Попробуйте другой запрос.' : 'Пока никто больше не зарегистрировался.'}</div>`;
           return;
         }
-        $('contactResults').innerHTML = people.map(person => `<div class="contact-card">${avatarMarkup(person)}<div class="contact-card-info"><div class="contact-card-name">${escapeHtml(person.display_name || person.username || 'Пользователь')}${verifiedMark(person.id, person)}</div><div class="contact-card-handle">@${escapeHtml(person.username || '')}</div></div><button class="btn btn-secondary" type="button" data-contact-id="${escapeHtml(person.id)}">Написать</button></div>`).join('');
+        $('contactResults').innerHTML = people.map(person => `<div class="contact-card">${avatarMarkup(person)}<div class="contact-card-info"><div class="contact-card-name">${escapeHtml(person.display_name || person.username || 'Пользователь')}${verifiedMark(person.id)}</div><div class="contact-card-handle">@${escapeHtml(person.username || '')}</div></div><button class="btn btn-secondary" type="button" data-contact-id="${escapeHtml(person.id)}">Написать</button></div>`).join('');
         $('contactResults').querySelectorAll('[data-contact-id]').forEach(button => button.addEventListener('click', () => startConversation(button.dataset.contactId)));
       } catch (error) {
         console.error('Load contacts failed:', error);
