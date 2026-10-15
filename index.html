@@ -78,6 +78,12 @@
     .verified-badge{display:inline-flex;align-items:center;justify-content:center;width:17px;height:17px;margin-left:5px;border-radius:50%;background:#229ed9;color:#fff;font-size:12px;font-weight:800;line-height:1;vertical-align:middle;flex:none}
     .verified-badge svg{width:11px;height:11px}
 </style>
+<style id="svyaz-menu-bottom-fix">
+/* Все пункты главной навигации прижаты к нижней части боковой панели */
+.sidebar { display:flex !important; flex-direction:column !important; }
+.sidebar .nav-item { flex:0 0 auto !important; }
+.sidebar .nav-item:first-of-type { margin-top:auto !important; }
+</style>
 </head>
 <body>
   <section id="authScreen" class="auth-screen">
@@ -113,7 +119,8 @@ class="sidebar" aria-label="Главная навигация">
       <div class="sidebar-bottom">
         <div class="mini-user"><div id="sidebarAvatar" class="avatar">С</div><div class="mini-user-info"><div id="sidebarName" class="mini-user-name">Пользователь</div><div id="sidebarHandle" class="mini-user-handle">@username</div></div></div>
       </div>
-    </aside>
+      <a class="nav-item" id="svyaz-tube-link" href="https://tranquil-tartufo-ffd8df.netlify.app/" target="_blank" rel="noopener noreferrer" style="text-decoration:none;"><span>📺</span><span>Связь Туб</span></a>
+</aside>
 
     <main class="main">
       <header class="topbar">
