@@ -100,12 +100,7 @@
   </section>
 
   <div id="app" class="app" hidden>
-    <aside 
-<a href="https://tranquil-tartufo-ffd8df.netlify.app/" target="_blank" rel="noopener noreferrer"
-   class="nav-item" id="svyaz-tube-link"
-   style="text-decoration:none;cursor:pointer;">
-  📺 <span>Связь Туб</span>
-</a>
+    
 class="sidebar" aria-label="Главная навигация">
       <div class="brand"><div class="brand-mark">✦</div><span>Связь</span></div><div class="network-status" role="status" aria-live="polite">● Связь</div>
       <div class="nav-label">МЕНЮ</div>
@@ -992,5 +987,13 @@ class="sidebar" aria-label="Главная навигация">
     boot().catch(error => { console.error(error); showToast(friendlyError(error), 'error'); });
   })();
   </script>
+
+<div id="svyaz-tube-floating" style="position:fixed;right:16px;bottom:16px;z-index:9999;">
+  <a href="https://tranquil-tartufo-ffd8df.netlify.app/" target="_blank" rel="noopener noreferrer"
+     style="display:inline-flex;align-items:center;gap:8px;padding:12px 16px;border-radius:12px;text-decoration:none;background:#447bba;color:#fff;font-weight:600;box-shadow:0 4px 16px rgba(0,0,0,.2);">
+    📺 Связь Туб
+  </a>
+</div>
+
 </body>
 </html>
