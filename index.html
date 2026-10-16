@@ -374,17 +374,35 @@
     }
 
     async function loadAdminIds() {
+      // ВАЖНО: проверяем только текущего пользователя.
+      // Благодаря этому обычный пользователь не получает список администраторов
+      // и не может увидеть вкладку «Модерация».
+      state.adminIds = new Set();
+      const nav = $('moderationNav');
+      if (nav) nav.hidden = true;
+
+      if (!state.user?.id || !supabase) return false;
+
       try {
-        const { data, error } = await supabase.from('app_admins').select('user_id');
+        const { data, error } = await supabase
+          .from('app_admins')
+          .select('user_id')
+          .eq('user_id', state.user.id)
+          .maybeSingle();
+
         if (error) throw error;
-        state.adminIds = new Set((data || []).map(row => String(row.user_id)));
-        const ownerIsAdmin = String(state.profile?.username || '').toLowerCase() === 'mihas105ka';
-        if (ownerIsAdmin && state.user?.id) state.adminIds.add(String(state.user.id));
-        if ($('moderationNav')) $('moderationNav').hidden = !(state.user?.id && state.adminIds.has(String(state.user.id)));
+
+        const isAdmin = Boolean(data?.user_id);
+        if (isAdmin) state.adminIds.add(String(state.user.id));
+
+        if (nav) nav.hidden = !isAdmin;
+        return isAdmin;
       } catch (error) {
-        // If the admin table has not been installed yet, fail closed: do not show a forged badge.
+        // При любой ошибке — безопасный режим: модерация скрыта.
+        console.warn('Проверка администратора не выполнена:', error);
         state.adminIds = new Set();
-        console.warn('Admin badge list unavailable; run the supplied Supabase SQL setup.', error);
+        if (nav) nav.hidden = true;
+        return false;
       }
     }
 
@@ -434,7 +452,8 @@
         console.error('Profile load failed:', error);
         showToast('Вход выполнен, но профиль не загрузился: ' + friendlyError(error), 'error');
       }
-      await loadAdminIds();
+      const isAdmin = await loadAdminIds();
+      if (!isAdmin && state.currentView === 'moderation') state.currentView = 'chats';
       // Repaint the own profile now that verified/admin IDs are loaded.
       if (state.profile) setProfileToUI(state.profile);
       $('settingsEmail').textContent = state.user.email || 'Не указан';
@@ -468,7 +487,14 @@
       if (viewName === 'contacts' && state.user) loadContacts($('contactSearch').value.trim());
       if (viewName === 'groups' && state.user) loadGroups();
       if (viewName === 'stories' && state.user) loadStories();
-      if (viewName === 'moderation' && state.user && state.adminIds.has(String(state.user.id))) loadModerationUsers();
+      if (viewName === 'moderation') {
+        if (!state.user || !state.adminIds.has(String(state.user.id))) {
+          navigate('chats');
+          showToast('Доступ к модерации разрешён только администратору.', 'error');
+          return;
+        }
+        loadModerationUsers();
+      }
     }
     document.querySelectorAll('[data-view]').forEach(button => button.addEventListener('click', () => navigate(button.dataset.view)));
     $('settingsToProfile').addEventListener('click', () => navigate('profile'));
@@ -478,7 +504,10 @@
       else if (state.currentView === 'stories') await loadStories();
       else if (state.currentView === 'feed') await loadFeed();
       else if (state.currentView === 'contacts') await loadContacts($('contactSearch').value.trim());
-      else if (state.currentView === 'moderation') await loadModerationUsers();
+      else if (state.currentView === 'moderation') {
+        if (state.adminIds.has(String(state.user?.id))) await loadModerationUsers();
+        else navigate('chats');
+      }
       else { try { await loadProfile(); showToast('Данные обновлены.', 'success'); } catch (e) { showToast(friendlyError(e), 'error'); } }
     });
 
@@ -888,18 +917,75 @@
     document.addEventListener('click', e => { if (!$('giftPicker')?.hidden && !$('giftPicker').contains(e.target) && e.target !== $('giftButton')) $('giftPicker').hidden = true; });
 
     async function loadModerationUsers() {
-      if (!state.user || !state.adminIds.has(String(state.user.id))) return;
-      const box = $('modUsers'); if (!box) return;
-      box.textContent = 'Загрузка…';
-      try {
-        const { data, error } = await supabase.from('profiles').select('id,username,display_name,avatar_url,is_verified').order('username').limit(200);
-        if (error) throw error;
-        box.innerHTML = (data || []).map(p => `<div class="mod-user">${avatarMarkup(p)}<div class="mod-user-info"><div><b>${escapeHtml(p.display_name || p.username || 'Пользователь')}</b>${verifiedMark(p.id,p)}</div><div class="subtle">@${escapeHtml(p.username || '')}</div></div><div class="mod-actions"><button class="btn btn-secondary" type="button" data-mod-verify="${escapeHtml(p.id)}">${p.is_verified?'Снять ✓':'✓ Проверить'}</button><button class="btn btn-danger" type="button" data-mod-ban="${escapeHtml(p.id)}">🚫 Бан</button></div></div>`).join('') || 'Пользователей пока нет.';
-        box.querySelectorAll('[data-mod-verify]').forEach(b => b.onclick = async () => { try { const verified = b.textContent.includes('Проверить'); const {error}=await supabase.rpc('admin_set_verified',{target_user:b.dataset.modVerify, verified}); if(error) throw error; showToast(verified?'Галочка выдана.':'Галочка снята.','success'); await loadModerationUsers(); if(state.profile?.id===b.dataset.modVerify){await loadProfile();} } catch(e){showToast('Не удалось изменить галочку: '+friendlyError(e),'error');} });
-        box.querySelectorAll('[data-mod-ban]').forEach(b => b.onclick = async () => { const reason=prompt('Причина бана (необязательно):','Нарушение правил'); if(reason===null)return; try { const {error}=await supabase.rpc('admin_ban_user',{target_user:b.dataset.modBan, reason, days:30}); if(error) throw error; showToast('Пользователь заблокирован на 30 дней.','success'); } catch(e){showToast('Не удалось заблокировать: '+friendlyError(e),'error');} });
-      } catch(e) { box.innerHTML = `<div class="empty">Не удалось загрузить пользователей.<br>${escapeHtml(friendlyError(e))}</div>`; }
-    }
+      if (!state.user || !state.adminIds.has(String(state.user.id))) {
+        if ($('moderationNav')) $('moderationNav').hidden = true;
+        if (state.currentView === 'moderation') navigate('chats');
+        return;
+      }
 
+      const box = $('modUsers');
+      if (!box) return;
+      box.textContent = 'Загрузка…';
+
+      try {
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('id,username,display_name,avatar_url,is_verified')
+          .order('username')
+          .limit(200);
+
+        if (error) throw error;
+
+        box.innerHTML = (data || []).map(p => `
+          <div class="mod-user">
+            ${avatarMarkup(p)}
+            <div class="mod-user-info">
+              <div><b>${escapeHtml(p.display_name || p.username || 'Пользователь')}</b>${verifiedMark(p.id,p)}</div>
+              <div class="subtle">@${escapeHtml(p.username || '')}</div>
+            </div>
+            <div class="mod-actions">
+              <button class="btn btn-secondary" type="button" data-mod-verify="${escapeHtml(p.id)}">${p.is_verified ? 'Снять ✓' : '✓ Проверить'}</button>
+              <button class="btn btn-danger" type="button" data-mod-ban="${escapeHtml(p.id)}">🚫 Бан</button>
+            </div>
+          </div>
+        `).join('') || 'Пользователей пока нет.';
+
+        box.querySelectorAll('[data-mod-verify]').forEach(b => b.onclick = async () => {
+          try {
+            const verified = b.textContent.includes('Проверить');
+            const { error } = await supabase.rpc('admin_set_verified', {
+              target_user: b.dataset.modVerify,
+              verified
+            });
+            if (error) throw error;
+            showToast(verified ? 'Галочка выдана.' : 'Галочка снята.', 'success');
+            await loadModerationUsers();
+            if (state.profile?.id === b.dataset.modVerify) await loadProfile();
+          } catch (e) {
+            showToast('Не удалось изменить галочку: ' + friendlyError(e), 'error');
+          }
+        });
+
+        box.querySelectorAll('[data-mod-ban]').forEach(b => b.onclick = async () => {
+          const reason = prompt('Причина бана (необязательно):', 'Нарушение правил');
+          if (reason === null) return;
+          try {
+            const { error } = await supabase.rpc('admin_ban_user', {
+              target_user: b.dataset.modBan,
+              reason,
+              days: 30
+            });
+            if (error) throw error;
+            showToast('Пользователь заблокирован на 30 дней.', 'success');
+          } catch (e) {
+            showToast('Не удалось заблокировать: ' + friendlyError(e), 'error');
+          }
+        });
+      } catch (e) {
+        box.innerHTML = `<div class="empty">Не удалось загрузить пользователей.<br>${escapeHtml(friendlyError(e))}<br><button id="retryModeration" class="btn btn-secondary" style="margin-top:12px" type="button">Повторить</button></div>`;
+        $('retryModeration')?.addEventListener('click', loadModerationUsers);
+      }
+    }
     $('messageForm').addEventListener('submit', async (event) => {
       event.preventDefault();
       const content = $('messageInput').value.trim();
