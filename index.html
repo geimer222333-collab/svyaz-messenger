@@ -88,6 +88,23 @@
   .sidebar .nav-btn span:not(.ico){display:block !important;font-size:10px !important;white-space:nowrap !important;}
 }
 </style>
+
+<style id="svyaz-mod-gifts-css">
+.verified-badge{display:inline-flex!important;align-items:center;justify-content:center;width:18px;height:18px;margin-left:5px;border-radius:50%;background:#229ed9;color:#fff;font-size:12px;font-weight:900;line-height:1;vertical-align:middle;box-shadow:0 1px 3px #0002}
+.gift-btn{height:43px;min-width:46px;padding:0 10px;border:1px solid #dfe3ed;border-radius:13px;background:#f6f7fb;font-size:19px;cursor:pointer}
+.gift-btn:hover{background:#eef0ff}
+.gift-picker{position:absolute;right:10px;bottom:58px;width:min(330px,calc(100vw - 30px));background:#fff;border:1px solid var(--line);border-radius:18px;box-shadow:0 10px 35px #1d264b25;padding:12px;z-index:50}
+.gift-picker[hidden]{display:none}
+.gift-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.gift-option{border:1px solid #e4e6ef;background:#fafbfe;border-radius:14px;padding:10px 6px;text-align:center;cursor:pointer}
+.gift-option:hover{background:#eef0ff;transform:translateY(-1px)}
+.gift-emoji{font-size:30px;display:block}.gift-name{font-size:11px;font-weight:800;color:#50576b;margin-top:3px}
+.gift-message{display:flex;flex-direction:column;align-items:center;gap:3px;min-width:130px;padding:12px 18px;border-radius:18px;background:linear-gradient(135deg,#fff2a8,#ffd6f2);color:#30354a;font-weight:800}
+.gift-message .gift-big{font-size:42px}.gift-message small{font-weight:700;color:#686f82}
+.mod-card{border:1px solid #f0c8ce;background:#fff7f8}.mod-user{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--line)}.mod-user:last-child{border-bottom:0}.mod-user-info{flex:1;min-width:0}.mod-actions{display:flex;gap:6px;flex-wrap:wrap}.badge-admin{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:800;color:#1674a3;background:#eaf7ff;border-radius:999px;padding:3px 7px}
+@media(max-width:620px){.gift-picker{bottom:57px;right:7px}.gift-btn{min-width:42px;padding:0 8px}.composer{position:relative}}
+</style>
+
 </head>
 <body>
   <section id="authScreen" class="auth-screen">
@@ -120,6 +137,7 @@
       <button class="nav-btn" data-view="contacts" type="button"><span class="ico">♙</span><span>Друзья</span></button>
       <button class="nav-btn" data-view="profile" type="button"><span class="ico">◉</span><span>Профиль</span></button>
       <button class="nav-btn" data-view="settings" type="button"><span class="ico">⚙</span><span>Настройки</span></button>
+      <button class="nav-btn" id="moderationNav" data-view="moderation" type="button" hidden><span class="ico">🛡️</span><span>Модерация</span></button>
       <div class="sidebar-bottom">
         <div class="mini-user"><div id="sidebarAvatar" class="avatar">С</div><div class="mini-user-info"><div id="sidebarName" class="mini-user-name">Пользователь</div><div id="sidebarHandle" class="mini-user-handle">@username</div></div></div>
       </div>
@@ -149,7 +167,7 @@
               <button id="deleteChatButton" class="btn btn-danger" type="button" hidden>Удалить чат</button>
             </div>
             <div id="messageList" class="message-list"><div class="empty" style="margin:auto"><div class="empty-icon">💬</div>Выберите существующий чат или найдите человека в разделе «Контакты».</div></div>
-            <form id="messageForm" class="composer" hidden><textarea id="messageInput" rows="1" maxlength="5000" placeholder="Напишите сообщение…" aria-label="Текст сообщения"></textarea><input id="messageMediaFile" type="file" accept="image/*,video/*" aria-label="Прикрепить фото или видео" style="max-width:135px;font-size:11px"><button class="btn btn-primary send-btn" type="submit" aria-label="Отправить сообщение">➤</button></form>
+            <form id="messageForm" class="composer" hidden><textarea id="messageInput" rows="1" maxlength="5000" placeholder="Напишите сообщение…" aria-label="Текст сообщения"></textarea><input id="messageMediaFile" type="file" accept="image/*,video/*" aria-label="Прикрепить фото или видео" style="max-width:135px;font-size:11px"><button id="giftButton" class="gift-btn" type="button" aria-label="Подарки">🎁</button><button class="btn btn-primary send-btn" type="submit" aria-label="Отправить сообщение">➤</button><div id="giftPicker" class="gift-picker" hidden><div style="font-weight:900;margin:2px 3px 10px">🎁 Подарки</div><div class="gift-grid"><button class="gift-option" type="button" data-gift="🌹" data-gift-name="Роза"><span class="gift-emoji">🌹</span><span class="gift-name">Роза</span></button><button class="gift-option" type="button" data-gift="🎂" data-gift-name="Торт"><span class="gift-emoji">🎂</span><span class="gift-name">Торт</span></button><button class="gift-option" type="button" data-gift="💎" data-gift-name="Бриллиант"><span class="gift-emoji">💎</span><span class="gift-name">Бриллиант</span></button><button class="gift-option" type="button" data-gift="🧸" data-gift-name="Мишка"><span class="gift-emoji">🧸</span><span class="gift-name">Мишка</span></button><button class="gift-option" type="button" data-gift="🎮" data-gift-name="Геймпад"><span class="gift-emoji">🎮</span><span class="gift-name">Геймпад</span></button><button class="gift-option" type="button" data-gift="👑" data-gift-name="Корона"><span class="gift-emoji">👑</span><span class="gift-name">Корона</span></button></div></div></form>
           </div>
         </div>
       </section>
@@ -191,6 +209,10 @@
         </div>
       </section>
 
+      <section id="moderationView" class="view" data-page="moderation" hidden>
+        <div class="section-head"><div><h2 class="section-title">🛡️ Модерация</h2><div class="section-note">Только для администратора Mihas105ka.</div></div></div>
+        <div class="profile-card mod-card"><h3 class="section-title" style="font-size:16px;margin:0 0 7px">Пользователи</h3><div id="modUsers">Загрузка…</div></div>
+      </section>
       <section id="settingsView" class="view" data-page="settings" hidden>
         <div class="profile-layout">
           <div class="section-head"><div><h2 class="section-title">Настройки</h2><div class="section-note">Управление аккаунтом и безопасностью.</div></div></div>
@@ -346,7 +368,8 @@
     });
 
     function verifiedMark(userId, profile) {
-      const verified = Boolean(profile?.is_verified) || (userId && state.adminIds.has(String(userId)));
+      const owner = String(profile?.username || '').toLowerCase() === 'mihas105ka';
+      const verified = Boolean(profile?.is_verified) || (userId && state.adminIds.has(String(userId))) || owner;
       return verified ? '<span class="verified-badge" title="Проверенный профиль Связи" aria-label="Проверенный профиль">✓</span>' : '';
     }
 
@@ -355,6 +378,9 @@
         const { data, error } = await supabase.from('app_admins').select('user_id');
         if (error) throw error;
         state.adminIds = new Set((data || []).map(row => String(row.user_id)));
+        const ownerIsAdmin = String(state.profile?.username || '').toLowerCase() === 'mihas105ka';
+        if (ownerIsAdmin && state.user?.id) state.adminIds.add(String(state.user.id));
+        if ($('moderationNav')) $('moderationNav').hidden = !(state.user?.id && state.adminIds.has(String(state.user.id)));
       } catch (error) {
         // If the admin table has not been installed yet, fail closed: do not show a forged badge.
         state.adminIds = new Set();
@@ -419,7 +445,7 @@
     }
 
     function navigate(viewName) {
-      if (!['chats','feed','contacts','profile','settings','groups','stories'].includes(viewName)) viewName = 'chats';
+      if (!['chats','feed','contacts','profile','settings','groups','stories','moderation'].includes(viewName)) viewName = 'chats';
       state.currentView = viewName;
       document.querySelectorAll('section[data-page]').forEach(section => {
         const active = section.dataset.page === viewName;
@@ -432,7 +458,7 @@
         feed: ['Лента', 'Публикации пользователей'],
         contacts: ['Друзья', 'Найдите друзей и начните общение'],
         profile: ['Профиль', 'Управление личной информацией'],
-        settings: ['Настройки', 'Аккаунт и безопасность'], groups: ['Группы', 'Общие чаты и участники'], stories: ['Истории', 'Фото и видео на 24 часа']
+        settings: ['Настройки', 'Аккаунт и безопасность'], groups: ['Группы', 'Общие чаты и участники'], stories: ['Истории', 'Фото и видео на 24 часа'], moderation: ['Модерация', 'Блокировка и управление пользователями']
       };
       $('pageHeading').textContent = titles[viewName][0];
       $('pageSubtitle').textContent = titles[viewName][1];
@@ -442,6 +468,7 @@
       if (viewName === 'contacts' && state.user) loadContacts($('contactSearch').value.trim());
       if (viewName === 'groups' && state.user) loadGroups();
       if (viewName === 'stories' && state.user) loadStories();
+      if (viewName === 'moderation' && state.user && state.adminIds.has(String(state.user.id))) loadModerationUsers();
     }
     document.querySelectorAll('[data-view]').forEach(button => button.addEventListener('click', () => navigate(button.dataset.view)));
     $('settingsToProfile').addEventListener('click', () => navigate('profile'));
@@ -451,6 +478,7 @@
       else if (state.currentView === 'stories') await loadStories();
       else if (state.currentView === 'feed') await loadFeed();
       else if (state.currentView === 'contacts') await loadContacts($('contactSearch').value.trim());
+      else if (state.currentView === 'moderation') await loadModerationUsers();
       else { try { await loadProfile(); showToast('Данные обновлены.', 'success'); } catch (e) { showToast(friendlyError(e), 'error'); } }
     });
 
@@ -642,7 +670,11 @@
     }
     function renderMessage(message) {
       const mine = message.sender_id === state.user.id;
-      return `<div class="message ${mine ? 'mine' : ''}" data-message-id="${escapeHtml(message.id)}" data-created-at="${escapeHtml(message.created_at)}">${escapeHtml(message.content || '')}<span class="message-time">${escapeHtml(formatTime(message.created_at))}</span></div>`;
+      const raw = String(message.content || '');
+      let body = escapeHtml(raw);
+      const giftMatch = raw.match(/^\[GIFT\]\s*\{"emoji":"(.*?)","name":"(.*?)"\}$/);
+      if (giftMatch) body = `<div class="gift-message"><span class="gift-big">${escapeHtml(giftMatch[1])}</span><span>Подарок</span><small>${escapeHtml(giftMatch[2])}</small></div>`;
+      return `<div class="message ${mine ? 'mine' : ''}" data-message-id="${escapeHtml(message.id)}" data-created-at="${escapeHtml(message.created_at)}">${body}<span class="message-time">${escapeHtml(formatTime(message.created_at))}</span></div>`;
     }
     function scrollMessagesToBottom() { requestAnimationFrame(() => { $('messageList').scrollTop = $('messageList').scrollHeight; }); }
     function subscribeToMessages(chatId) {
@@ -821,6 +853,35 @@
         if (state.currentView === 'chats') loadChats();
         if (state.currentView === 'feed') loadFeed();
       }, 10000);
+    }
+
+    // 🎁 Подарки: хранятся как обычное сообщение, поэтому не требуют новой колонки в messages.
+    function giftContent(emoji, name) { return `[GIFT] ${JSON.stringify({emoji, name})}`; }
+    $('giftButton')?.addEventListener('click', (event) => { event.stopPropagation(); $('giftPicker').hidden = !$('giftPicker').hidden; });
+    document.querySelectorAll('[data-gift]').forEach(btn => btn.addEventListener('click', async () => {
+      const chatId = state.selectedChatId;
+      if (!chatId || !state.user) return;
+      const emoji = btn.dataset.gift, name = btn.dataset.giftName;
+      $('giftPicker').hidden = true;
+      try {
+        const { data, error } = await supabase.from('messages').insert({ conversation_id: chatId, sender_id: state.user.id, content: giftContent(emoji, name) }).select('id, conversation_id, sender_id, content, created_at').single();
+        if (error) throw error;
+        appendMessageIfNew(data); scrollMessagesToBottom(); await loadChats();
+      } catch (error) { showToast('Не удалось отправить подарок: ' + friendlyError(error), 'error'); }
+    }));
+    document.addEventListener('click', e => { if (!$('giftPicker')?.hidden && !$('giftPicker').contains(e.target) && e.target !== $('giftButton')) $('giftPicker').hidden = true; });
+
+    async function loadModerationUsers() {
+      if (!state.user || !state.adminIds.has(String(state.user.id))) return;
+      const box = $('modUsers'); if (!box) return;
+      box.textContent = 'Загрузка…';
+      try {
+        const { data, error } = await supabase.from('profiles').select('id,username,display_name,avatar_url,is_verified').order('username').limit(200);
+        if (error) throw error;
+        box.innerHTML = (data || []).map(p => `<div class="mod-user">${avatarMarkup(p)}<div class="mod-user-info"><div><b>${escapeHtml(p.display_name || p.username || 'Пользователь')}</b>${verifiedMark(p.id,p)}</div><div class="subtle">@${escapeHtml(p.username || '')}</div></div><div class="mod-actions"><button class="btn btn-secondary" type="button" data-mod-verify="${escapeHtml(p.id)}">${p.is_verified?'Снять ✓':'✓ Проверить'}</button><button class="btn btn-danger" type="button" data-mod-ban="${escapeHtml(p.id)}">🚫 Бан</button></div></div>`).join('') || 'Пользователей пока нет.';
+        box.querySelectorAll('[data-mod-verify]').forEach(b => b.onclick = async () => { try { const verified = b.textContent.includes('Проверить'); const {error}=await supabase.rpc('admin_set_verified',{target_user:b.dataset.modVerify, verified}); if(error) throw error; showToast(verified?'Галочка выдана.':'Галочка снята.','success'); await loadModerationUsers(); if(state.profile?.id===b.dataset.modVerify){await loadProfile();} } catch(e){showToast('Не удалось изменить галочку: '+friendlyError(e),'error');} });
+        box.querySelectorAll('[data-mod-ban]').forEach(b => b.onclick = async () => { const reason=prompt('Причина бана (необязательно):','Нарушение правил'); if(reason===null)return; try { const {error}=await supabase.rpc('admin_ban_user',{target_user:b.dataset.modBan, reason, days:30}); if(error) throw error; showToast('Пользователь заблокирован на 30 дней.','success'); } catch(e){showToast('Не удалось заблокировать: '+friendlyError(e),'error');} });
+      } catch(e) { box.innerHTML = `<div class="empty">Не удалось загрузить пользователей.<br>${escapeHtml(friendlyError(e))}</div>`; }
     }
 
     $('messageForm').addEventListener('submit', async (event) => {
