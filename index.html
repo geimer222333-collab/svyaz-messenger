@@ -194,7 +194,7 @@
               <button id="deleteChatButton" class="btn btn-danger" type="button" hidden>Удалить чат</button>
             </div>
             <div id="messageList" class="message-list"><div class="empty" style="margin:auto"><div class="empty-icon">💬</div>Выберите существующий чат или найдите человека в разделе «Контакты».</div></div>
-            <form id="messageForm" class="composer" hidden><textarea id="messageInput" rows="1" maxlength="5000" placeholder="Напишите сообщение…" aria-label="Текст сообщения"></textarea><input id="messageMediaFile" type="file" accept="image/*,video/*" aria-label="Прикрепить фото или видео" style="max-width:135px;font-size:11px"><button id="giftButton" class="gift-btn" type="button" aria-label="Подарки">🎁</button><button class="btn btn-primary send-btn" type="submit" aria-label="Отправить сообщение">➤</button><div id="giftPicker" class="gift-picker" hidden><div style="font-weight:900;margin:2px 3px 10px">🎁 Подарки</div><div id="giftGrid" class="gift-grid"><div class="subtle">Загрузка подарков…</div></div><div class="subtle" style="margin-top:10px">Подарок отправляется из твоего запаса. Получатель увидит его у себя в профиле. Покупка пополняет твой запас.</div><div class="gift-buy-row"><select id="giftBuySelect" aria-label="Подарок для покупки"></select><button id="giftBuyButton" class="btn btn-secondary" type="button">Купить</button></div></div></form>
+            <form id="messageForm" class="composer" hidden><textarea id="messageInput" rows="1" maxlength="5000" placeholder="Напишите сообщение…" aria-label="Текст сообщения"></textarea><input id="messageMediaFile" type="file" accept="image/*,video/*" aria-label="Прикрепить фото или видео" style="max-width:135px;font-size:11px"><button id="giftButton" class="gift-btn" type="button" aria-label="Подарки">🎁</button><button class="btn btn-primary send-btn" type="submit" aria-label="Отправить сообщение">➤</button><div id="giftPicker" class="gift-picker" hidden><div style="font-weight:900;margin:2px 3px 10px">🎁 Подарки</div><div id="giftGrid" class="gift-grid"><div class="subtle">Загрузка подарков…</div></div><div class="subtle" style="margin-top:10px">Подарок отправляется из твоего запаса. Получатель увидит его у себя в профиле. Покупка пополняет твой запас.</div><div class="gift-buy-row"><select id="giftBuySelect" aria-label="Подарок для покупки"></select><button id="giftBuyButton" class="btn btn-secondary" type="button">💳 Купить</button></div></div></form>
           </div>
         </div>
       </section>
@@ -431,12 +431,13 @@
         console.warn('Gift catalog unavailable:', error);
         // Fallback only for displaying the picker; real inventory is still server-side.
         state.giftCatalog = [
-          {id:'rose',emoji:'🌹',name:'Роза',price_cents:99,currency:'RUB',sort_order:1,active:true},
-          {id:'cake',emoji:'🎂',name:'Торт',price_cents:299,currency:'RUB',sort_order:2,active:true},
-          {id:'diamond',emoji:'💎',name:'Бриллиант',price_cents:499,currency:'RUB',sort_order:3,active:true},
-          {id:'teddy',emoji:'🧸',name:'Мишка',price_cents:199,currency:'RUB',sort_order:4,active:true},
-          {id:'gamepad',emoji:'🎮',name:'Геймпад',price_cents:399,currency:'RUB',sort_order:5,active:true},
-          {id:'crown',emoji:'👑',name:'Корона',price_cents:999,currency:'RUB',sort_order:6,active:true}
+          {id:'rose',emoji:'🌹',name:'Роза',price_cents:5000,currency:'RUB',sort_order:1,active:true},
+          {id:'heart',emoji:'❤️',name:'Сердце',price_cents:7500,currency:'RUB',sort_order:2,active:true},
+          {id:'star',emoji:'⭐',name:'Звезда',price_cents:10000,currency:'RUB',sort_order:3,active:true},
+          {id:'cake',emoji:'🎂',name:'Торт',price_cents:12500,currency:'RUB',sort_order:4,active:true},
+          {id:'diamond',emoji:'💎',name:'Алмаз',price_cents:15000,currency:'RUB',sort_order:5,active:true},
+          {id:'crown',emoji:'👑',name:'Корона',price_cents:20000,currency:'RUB',sort_order:6,active:true},
+          {id:'trophy',emoji:'🏆',name:'Кубок',price_cents:25000,currency:'RUB',sort_order:7,active:true}
         ];
       }
       await loadMyGifts();
@@ -513,23 +514,33 @@
     async function buyGift(giftId) {
       const gift = state.giftCatalog.find(x => String(x.id) === String(giftId));
       if (!gift) return;
-      // Real-money payments must be created on a trusted server/Edge Function.
-      // This endpoint is intentionally separate from the public anon key.
+      if (!state.user) {
+        showToast('Сначала войдите в аккаунт.', 'error');
+        return;
+      }
+
+      const button = $('giftBuyButton');
+      setLoading(button, true, 'Создаём оплату…');
+
       try {
-        const sessionResult = await supabase.auth.getSession();
-        const accessToken = sessionResult.data?.session?.access_token;
-        if (!accessToken) throw new Error('Сессия не найдена.');
-        const response = await fetch(`${SUPABASE_URL}/functions/v1/create-gift-checkout`, {
-          method:'POST',
-          headers:{'Content-Type':'application/json','Authorization':`Bearer ${accessToken}`},
-          body:JSON.stringify({gift_id:gift.id})
+        // Оплата создаётся на сервере, а не в браузере.
+        // Секретный ключ платёжного сервиса никогда не попадает в HTML.
+        const { data, error } = await supabase.functions.invoke('create-gift-checkout', {
+          body: { gift_id: gift.id }
         });
-        const payload = await response.json().catch(() => ({}));
-        if (!response.ok) throw new Error(payload.error || 'Сервис оплаты ещё не настроен.');
-        if (payload.url) { window.location.href = payload.url; return; }
-        throw new Error('Сервис оплаты не вернул ссылку.');
+
+        if (error) throw error;
+        if (!data?.url) throw new Error(data?.error || 'Сервис оплаты не вернул ссылку.');
+
+        window.location.href = data.url;
       } catch (error) {
-        showToast('Покупка пока не подключена: ' + friendlyError(error), 'error');
+        console.error('Gift checkout:', error);
+        showToast(
+          'Покупка пока не подключена. Сначала настройте Edge Function create-gift-checkout и ключи платёжного сервиса.',
+          'error'
+        );
+      } finally {
+        setLoading(button, false);
       }
     }
 
