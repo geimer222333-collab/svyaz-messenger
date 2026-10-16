@@ -374,15 +374,29 @@
     }
 
     async function loadAdminIds() {
-      // ВАЖНО: проверяем только текущего пользователя.
-      // Благодаря этому обычный пользователь не получает список администраторов
-      // и не может увидеть вкладку «Модерация».
+      // Главный аккаунт администратора. Проверяем email текущей
+      // авторизованной сессии, поэтому чужой аккаунт не получит доступ.
+      const ADMIN_EMAIL = 'michasa1993@gmail.com';
       state.adminIds = new Set();
       const nav = $('moderationNav');
       if (nav) nav.hidden = true;
 
       if (!state.user?.id || !supabase) return false;
 
+      const currentEmail = String(state.user.email || '').trim().toLowerCase();
+      const emailIsAdmin = currentEmail === ADMIN_EMAIL;
+
+      // Для твоего аккаунта не зависим от наличия записи в app_admins:
+      // именно это исправляет ситуацию, когда вкладка есть, но приложение
+      // считает администратора обычным пользователем.
+      if (emailIsAdmin) {
+        state.adminIds.add(String(state.user.id));
+        if (nav) nav.hidden = false;
+        return true;
+      }
+
+      // Для всех остальных пользователей оставляем дополнительную проверку
+      // через app_admins, если таблица настроена.
       try {
         const { data, error } = await supabase
           .from('app_admins')
@@ -394,11 +408,9 @@
 
         const isAdmin = Boolean(data?.user_id);
         if (isAdmin) state.adminIds.add(String(state.user.id));
-
         if (nav) nav.hidden = !isAdmin;
         return isAdmin;
       } catch (error) {
-        // При любой ошибке — безопасный режим: модерация скрыта.
         console.warn('Проверка администратора не выполнена:', error);
         state.adminIds = new Set();
         if (nav) nav.hidden = true;
