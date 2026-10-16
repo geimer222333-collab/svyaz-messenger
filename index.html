@@ -102,7 +102,34 @@
 .gift-message{display:flex;flex-direction:column;align-items:center;gap:3px;min-width:130px;padding:12px 18px;border-radius:18px;background:linear-gradient(135deg,#fff2a8,#ffd6f2);color:#30354a;font-weight:800}
 .gift-message .gift-big{font-size:42px}.gift-message small{font-weight:700;color:#686f82}
 .mod-card{border:1px solid #f0c8ce;background:#fff7f8}.mod-user{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--line)}.mod-user:last-child{border-bottom:0}.mod-user-info{flex:1;min-width:0}.mod-actions{display:flex;gap:6px;flex-wrap:wrap}.badge-admin{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:800;color:#1674a3;background:#eaf7ff;border-radius:999px;padding:3px 7px}
-@media(max-width:620px){.gift-picker{bottom:57px;right:7px}.gift-btn{min-width:42px;padding:0 8px}.composer{position:relative}}
+.public-profile-modal{position:fixed;inset:0;z-index:90;background:#1d264b66;display:grid;place-items:center;padding:18px}
+.public-profile-card{width:min(100%,520px);max-height:min(90dvh,760px);overflow:auto;background:#fff;border:1px solid var(--line);border-radius:22px;box-shadow:0 18px 60px #1d264b35;padding:20px}
+.public-profile-head{display:flex;align-items:center;gap:14px;padding-bottom:16px;border-bottom:1px solid var(--line)}
+.public-profile-head .avatar{width:70px;height:70px;flex-basis:70px;font-size:22px}
+.public-profile-name{font-size:21px;font-weight:850}.public-profile-handle{font-size:13px;color:var(--muted);margin-top:4px}
+.public-profile-close{margin-left:auto;border:0;background:#f1f3f8;border-radius:12px;width:40px;height:40px;font-size:22px}
+.gift-inventory{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-top:12px}
+.gift-inventory-item{border:1px solid var(--line);border-radius:15px;padding:12px 7px;text-align:center;background:#fafbfe}
+.gift-inventory-item .gift-big{font-size:34px;display:block}.gift-inventory-item b{font-size:12px}.gift-count{font-size:11px;color:var(--muted);margin-top:3px}
+.gift-picker{max-height:70dvh;overflow:auto}
+.gift-option{position:relative}.gift-price{font-size:10px;color:var(--primary);font-weight:900;margin-top:3px}.gift-count-pill{position:absolute;right:5px;top:5px;background:var(--primary);color:#fff;border-radius:999px;min-width:19px;padding:2px 5px;font-size:9px;font-weight:900}
+.gift-buy-row{display:flex;gap:7px;align-items:center;margin-top:10px;padding-top:10px;border-top:1px solid var(--line)}
+.gift-buy-row select{flex:1;border:1px solid #dfe3ed;border-radius:10px;padding:9px;background:#fff}
+.profile-link{border:0;background:transparent;padding:0;color:inherit;font:inherit;text-align:left;cursor:pointer}
+.profile-link:hover{text-decoration:underline}
+.mod-user{align-items:flex-start!important}
+.mod-user .avatar{margin-top:2px}
+.mod-user-info{padding-top:2px}
+.mod-user-status{font-size:11px;margin-top:5px;font-weight:700}
+.mod-user-status.banned{color:var(--danger)}
+.mod-user-status.ok{color:var(--good)}
+.mod-actions{justify-content:flex-end}
+.mod-actions .btn{font-size:11px;padding:8px 9px}
+.mod-gift-row{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:7px}
+.mod-gift-row select{border:1px solid #dfe3ed;border-radius:9px;padding:7px 8px;background:#fff;max-width:150px}
+@media(max-width:620px){.mod-user{flex-wrap:wrap}.mod-user-info{flex:1;min-width:150px}.mod-actions{width:100%;padding-left:52px;justify-content:flex-start}.mod-actions .btn{flex:1 1 105px}}
+@media(max-width:620px){.gift-picker{bottom:57px;right:7px}.gift-btn{min-width:42px;padding:0 8px}.composer{position:relative}.gift-inventory{grid-template-columns:repeat(2,1fr)}}
+
 </style>
 
 </head>
@@ -167,7 +194,7 @@
               <button id="deleteChatButton" class="btn btn-danger" type="button" hidden>Удалить чат</button>
             </div>
             <div id="messageList" class="message-list"><div class="empty" style="margin:auto"><div class="empty-icon">💬</div>Выберите существующий чат или найдите человека в разделе «Контакты».</div></div>
-            <form id="messageForm" class="composer" hidden><textarea id="messageInput" rows="1" maxlength="5000" placeholder="Напишите сообщение…" aria-label="Текст сообщения"></textarea><input id="messageMediaFile" type="file" accept="image/*,video/*" aria-label="Прикрепить фото или видео" style="max-width:135px;font-size:11px"><button id="giftButton" class="gift-btn" type="button" aria-label="Подарки">🎁</button><button class="btn btn-primary send-btn" type="submit" aria-label="Отправить сообщение">➤</button><div id="giftPicker" class="gift-picker" hidden><div style="font-weight:900;margin:2px 3px 10px">🎁 Подарки</div><div class="gift-grid"><button class="gift-option" type="button" data-gift="🌹" data-gift-name="Роза"><span class="gift-emoji">🌹</span><span class="gift-name">Роза</span></button><button class="gift-option" type="button" data-gift="🎂" data-gift-name="Торт"><span class="gift-emoji">🎂</span><span class="gift-name">Торт</span></button><button class="gift-option" type="button" data-gift="💎" data-gift-name="Бриллиант"><span class="gift-emoji">💎</span><span class="gift-name">Бриллиант</span></button><button class="gift-option" type="button" data-gift="🧸" data-gift-name="Мишка"><span class="gift-emoji">🧸</span><span class="gift-name">Мишка</span></button><button class="gift-option" type="button" data-gift="🎮" data-gift-name="Геймпад"><span class="gift-emoji">🎮</span><span class="gift-name">Геймпад</span></button><button class="gift-option" type="button" data-gift="👑" data-gift-name="Корона"><span class="gift-emoji">👑</span><span class="gift-name">Корона</span></button></div></div></form>
+            <form id="messageForm" class="composer" hidden><textarea id="messageInput" rows="1" maxlength="5000" placeholder="Напишите сообщение…" aria-label="Текст сообщения"></textarea><input id="messageMediaFile" type="file" accept="image/*,video/*" aria-label="Прикрепить фото или видео" style="max-width:135px;font-size:11px"><button id="giftButton" class="gift-btn" type="button" aria-label="Подарки">🎁</button><button class="btn btn-primary send-btn" type="submit" aria-label="Отправить сообщение">➤</button><div id="giftPicker" class="gift-picker" hidden><div style="font-weight:900;margin:2px 3px 10px">🎁 Подарки</div><div id="giftGrid" class="gift-grid"><div class="subtle">Загрузка подарков…</div></div><div class="subtle" style="margin-top:10px">Подарок отправляется из твоего запаса. Получатель увидит его у себя в профиле. Покупка пополняет твой запас.</div><div class="gift-buy-row"><select id="giftBuySelect" aria-label="Подарок для покупки"></select><button id="giftBuyButton" class="btn btn-secondary" type="button">Купить</button></div></div></form>
           </div>
         </div>
       </section>
@@ -210,10 +237,15 @@
       </section>
 
       <section id="moderationView" class="view" data-page="moderation" hidden>
-        <div class="section-head"><div><h2 class="section-title">🛡️ Модерация</h2><div class="section-note">Только для администратора Mihas105ka.</div></div></div>
-        <div class="profile-card mod-card"><h3 class="section-title" style="font-size:16px;margin:0 0 7px">Пользователи</h3><div id="modUsers">Загрузка…</div></div>
-      </section>
-      <section id="settingsView" class="view" data-page="settings" hidden>
+         <div class="section-head"><div><h2 class="section-title">🛡️ Модерация</h2><div class="section-note">Только для администратора Mihas105ka.</div></div></div>
+         <div class="profile-card mod-card">
+           <h3 class="section-title" style="font-size:16px;margin:0 0 7px">Пользователи</h3>
+           <div class="subtle" style="margin-bottom:12px">Выдача галочки, бан/разбан и подарки. Доступ есть только у владельца.</div>
+           <input id="modSearch" class="search-input" type="search" placeholder="Поиск по имени или username…" aria-label="Поиск пользователей для модерации" style="margin-bottom:10px">
+           <div id="modUsers">Загрузка…</div>
+         </div>
+       </section>
+       <section id="settingsView" class="view" data-page="settings" hidden>
         <div class="profile-layout">
           <div class="section-head"><div><h2 class="section-title">Настройки</h2><div class="section-note">Управление аккаунтом и безопасностью.</div></div></div>
           <div class="profile-card">
@@ -232,6 +264,20 @@
       </section>
     </main>
   </div>
+  <div id="publicProfileModal" class="public-profile-modal" hidden>
+    <div class="public-profile-card" role="dialog" aria-modal="true" aria-labelledby="publicProfileName">
+      <div class="public-profile-head">
+        <div id="publicProfileAvatar" class="avatar">П</div>
+        <div style="min-width:0;flex:1"><div id="publicProfileName" class="public-profile-name">Пользователь</div><div id="publicProfileHandle" class="public-profile-handle">@username</div></div>
+        <button id="publicProfileClose" class="public-profile-close" type="button" aria-label="Закрыть">×</button>
+      </div>
+      <div style="padding-top:16px">
+        <h3 class="section-title" style="margin-bottom:4px">🎁 Подарки</h3>
+        <div id="publicProfileGifts" class="subtle">Загрузка…</div>
+        <div id="publicProfileActions" style="margin-top:16px;display:flex;gap:8px;flex-wrap:wrap"></div>
+      </div>
+    </div>
+  </div>
   <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
 
   <script>
@@ -243,7 +289,7 @@
     const SUPABASE_ANON_KEY = 'sb_publishable_YI45md4z0v49nU5cvJuibA_SOErCNba';
 
     const $ = (id) => document.getElementById(id);
-    const state = { user: null, profile: null, adminIds: new Set(), currentView: 'chats', chats: [], selectedChatId: null, selectedChat: null, messagesChannel: null, liveChannel: null, liveTimer: null, messageTimer: null, feedChannel: null, authMode: 'login', toastTimer: null, contactTimer: null, chatTimer: null, isLoadingContacts: false, isLoadingChats: false, isSyncingMessages: false, feedFilter: 'all', feed: [] };
+    const state = { user: null, profile: null, adminIds: new Set(), currentView: 'chats', chats: [], selectedChatId: null, selectedChat: null, messagesChannel: null, liveChannel: null, liveTimer: null, messageTimer: null, feedChannel: null, authMode: 'login', toastTimer: null, contactTimer: null, chatTimer: null, isLoadingContacts: false, isLoadingChats: false, isSyncingMessages: false, feedFilter: 'all', feed: [], giftCatalog: [], myGifts: new Map(), publicProfileUserId: null };
     let supabase;
 
     function escapeHtml(value) {
@@ -373,10 +419,161 @@
       return verified ? '<span class="verified-badge" title="Проверенный профиль Связи" aria-label="Проверенный профиль">✓</span>' : '';
     }
 
+
+    const ADMIN_EMAIL = 'michasa1993@gmail.com';
+
+    async function loadGiftCatalog() {
+      try {
+        const { data, error } = await supabase.from('gift_catalog').select('id,emoji,name,price_cents,currency,sort_order,active').eq('active', true).order('sort_order').order('price_cents');
+        if (error) throw error;
+        state.giftCatalog = data || [];
+      } catch (error) {
+        console.warn('Gift catalog unavailable:', error);
+        // Fallback only for displaying the picker; real inventory is still server-side.
+        state.giftCatalog = [
+          {id:'rose',emoji:'🌹',name:'Роза',price_cents:99,currency:'RUB',sort_order:1,active:true},
+          {id:'cake',emoji:'🎂',name:'Торт',price_cents:299,currency:'RUB',sort_order:2,active:true},
+          {id:'diamond',emoji:'💎',name:'Бриллиант',price_cents:499,currency:'RUB',sort_order:3,active:true},
+          {id:'teddy',emoji:'🧸',name:'Мишка',price_cents:199,currency:'RUB',sort_order:4,active:true},
+          {id:'gamepad',emoji:'🎮',name:'Геймпад',price_cents:399,currency:'RUB',sort_order:5,active:true},
+          {id:'crown',emoji:'👑',name:'Корона',price_cents:999,currency:'RUB',sort_order:6,active:true}
+        ];
+      }
+      await loadMyGifts();
+      renderGiftPicker();
+    }
+
+    async function loadMyGifts() {
+      state.myGifts = new Map();
+      if (!state.user) return;
+      try {
+        const { data, error } = await supabase.from('user_gifts').select('gift_id,quantity').eq('user_id', state.user.id);
+        if (error) throw error;
+        (data || []).forEach(row => state.myGifts.set(String(row.gift_id), Number(row.quantity || 0)));
+      } catch (error) {
+        console.warn('User gifts unavailable:', error);
+      }
+    }
+
+    function moneyLabel(g) {
+      const cents = Number(g.price_cents || 0);
+      const cur = String(g.currency || 'RUB').toUpperCase();
+      return (cents / 100).toFixed(2).replace(/\.00$/,'') + ' ' + cur;
+    }
+
+    function renderGiftPicker() {
+      const grid = $('giftGrid'), select = $('giftBuySelect');
+      if (!grid || !select) return;
+      if (!state.giftCatalog.length) {
+        grid.innerHTML = '<div class="subtle">Подарки пока не настроены.</div>';
+        select.innerHTML = '';
+        return;
+      }
+      grid.innerHTML = state.giftCatalog.map(g => {
+        const count = state.myGifts.get(String(g.id)) || 0;
+        return `<button class="gift-option" type="button" data-gift-id="${escapeHtml(g.id)}">
+          ${count ? `<span class="gift-count-pill">${count}</span>` : ''}
+          <span class="gift-emoji">${escapeHtml(g.emoji)}</span><span class="gift-name">${escapeHtml(g.name)}</span>
+          <span class="gift-price">${count ? 'Есть: '+count : moneyLabel(g)}</span>
+        </button>`;
+      }).join('');
+      select.innerHTML = state.giftCatalog.map(g => `<option value="${escapeHtml(g.id)}">${escapeHtml(g.emoji)} ${escapeHtml(g.name)} — ${escapeHtml(moneyLabel(g))}</option>`).join('');
+      grid.querySelectorAll('[data-gift-id]').forEach(btn => btn.addEventListener('click', () => sendGift(btn.dataset.giftId)));
+    }
+
+    async function sendGift(giftId) {
+      const chatId = state.selectedChatId;
+      if (!chatId || !state.user || !state.selectedChat) return;
+      const gift = state.giftCatalog.find(x => String(x.id) === String(giftId));
+      if (!gift) return;
+      const count = state.myGifts.get(String(giftId)) || 0;
+      if (count < 1) {
+        showToast('У тебя нет этого подарка. Нажми «Купить», чтобы пополнить запас.', 'error');
+        return;
+      }
+      $('giftPicker').hidden = true;
+      try {
+        const { data, error } = await supabase.rpc('send_gift', {
+          target_conversation: chatId,
+          target_user: state.selectedChat.other?.id,
+          gift_id: gift.id
+        });
+        if (error) throw error;
+        if (data?.message) appendMessageIfNew(data.message);
+        else if (data?.id) appendMessageIfNew(data);
+        state.myGifts.set(String(giftId), Math.max(0, count - 1));
+        showToast(`${gift.emoji} ${gift.name} отправлен.`, 'success');
+        scrollMessagesToBottom();
+        await loadChats();
+      } catch (error) {
+        showToast('Не удалось отправить подарок: ' + friendlyError(error), 'error');
+      }
+    }
+
+    async function buyGift(giftId) {
+      const gift = state.giftCatalog.find(x => String(x.id) === String(giftId));
+      if (!gift) return;
+      // Real-money payments must be created on a trusted server/Edge Function.
+      // This endpoint is intentionally separate from the public anon key.
+      try {
+        const sessionResult = await supabase.auth.getSession();
+        const accessToken = sessionResult.data?.session?.access_token;
+        if (!accessToken) throw new Error('Сессия не найдена.');
+        const response = await fetch(`${SUPABASE_URL}/functions/v1/create-gift-checkout`, {
+          method:'POST',
+          headers:{'Content-Type':'application/json','Authorization':`Bearer ${accessToken}`},
+          body:JSON.stringify({gift_id:gift.id})
+        });
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(payload.error || 'Сервис оплаты ещё не настроен.');
+        if (payload.url) { window.location.href = payload.url; return; }
+        throw new Error('Сервис оплаты не вернул ссылку.');
+      } catch (error) {
+        showToast('Покупка пока не подключена: ' + friendlyError(error), 'error');
+      }
+    }
+
+    async function loadPublicProfile(userId) {
+      if (!userId || !supabase) return;
+      state.publicProfileUserId = String(userId);
+      $('publicProfileModal').hidden = false;
+      $('publicProfileGifts').textContent = 'Загрузка…';
+      $('publicProfileActions').innerHTML = '';
+      try {
+        const { data: profile, error } = await supabase.from('profiles').select('id,username,display_name,avatar_url,is_verified').eq('id', userId).maybeSingle();
+        if (error) throw error;
+        if (!profile) throw new Error('Профиль не найден.');
+        const name = profile.display_name || profile.username || 'Пользователь';
+        $('publicProfileAvatar').innerHTML = avatarMarkup(profile);
+        $('publicProfileName').innerHTML = escapeHtml(name) + verifiedMark(profile.id, profile);
+        $('publicProfileHandle').textContent = '@' + (profile.username || 'user');
+
+        const { data: gifts, error: giftError } = await supabase
+          .from('user_gifts')
+          .select('gift_id,quantity,gift_catalog(id,emoji,name)')
+          .eq('user_id', userId)
+          .gt('quantity', 0);
+        if (giftError) throw giftError;
+        const rows = (gifts || []).filter(x => x.gift_catalog);
+        $('publicProfileGifts').innerHTML = rows.length
+          ? `<div class="gift-inventory">${rows.map(x => `<div class="gift-inventory-item"><span class="gift-big">${escapeHtml(x.gift_catalog.emoji)}</span><b>${escapeHtml(x.gift_catalog.name)}</b><div class="gift-count">× ${Number(x.quantity || 0)}</div></div>`).join('')}</div>`
+          : '<div class="subtle" style="padding:12px 0">Подарков пока нет.</div>';
+        $('publicProfileActions').innerHTML = `<button class="btn btn-primary" type="button" id="publicProfileMessage">💬 Написать</button>`;
+        $('publicProfileMessage').onclick = async () => {
+          $('publicProfileModal').hidden = true;
+          if (String(userId) !== String(state.user.id)) await startConversation(userId);
+        };
+      } catch (error) {
+        $('publicProfileGifts').innerHTML = `<div class="subtle">Не удалось загрузить профиль: ${escapeHtml(friendlyError(error))}</div>`;
+      }
+    }
+
+    $('publicProfileClose')?.addEventListener('click', () => $('publicProfileModal').hidden = true);
+    $('publicProfileModal')?.addEventListener('click', e => { if (e.target === $('publicProfileModal')) $('publicProfileModal').hidden = true; });
+
     async function loadAdminIds() {
       // Главный аккаунт администратора. Проверяем email текущей
       // авторизованной сессии, поэтому чужой аккаунт не получит доступ.
-      const ADMIN_EMAIL = 'michasa1993@gmail.com';
       state.adminIds = new Set();
       const nav = $('moderationNav');
       if (nav) nav.hidden = true;
@@ -395,27 +592,10 @@
         return true;
       }
 
-      // Для всех остальных пользователей оставляем дополнительную проверку
-      // через app_admins, если таблица настроена.
-      try {
-        const { data, error } = await supabase
-          .from('app_admins')
-          .select('user_id')
-          .eq('user_id', state.user.id)
-          .maybeSingle();
-
-        if (error) throw error;
-
-        const isAdmin = Boolean(data?.user_id);
-        if (isAdmin) state.adminIds.add(String(state.user.id));
-        if (nav) nav.hidden = !isAdmin;
-        return isAdmin;
-      } catch (error) {
-        console.warn('Проверка администратора не выполнена:', error);
-        state.adminIds = new Set();
-        if (nav) nav.hidden = true;
-        return false;
-      }
+      // Владелец — единственный администратор. Не используем app_admins,
+      // чтобы обычные пользователи не получили мод-меню.
+      if (nav) nav.hidden = true;
+      return false;
     }
 
     function setProfileToUI(profile) {
@@ -471,6 +651,7 @@
       $('settingsEmail').textContent = state.user.email || 'Не указан';
       navigate('chats');
       await loadChats();
+      await loadGiftCatalog();
       updateNotificationStatus();
       startLiveUpdates();
     }
@@ -563,7 +744,7 @@
     function feedTime(s){const d=new Date(s);return Number.isNaN(d.getTime())?'':d.toLocaleString([], {day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});}
     function feedMedia(post){const u=String(post.media_url||'');if(!u)return '';if(String(post.media_type||'').startsWith('video/'))return `<video class="post-media" src="${escapeHtml(u)}" controls playsinline preload="metadata"></video>`;return `<img class="post-media" src="${escapeHtml(u)}" alt="Публикация" loading="lazy">`;}
     async function loadFeed(silent=false){if(!state.user)return;const box=$('feedList');if(!silent)box.innerHTML='<div class="feed-empty">Загружаем ленту…</div>';try{let q=supabase.from('posts').select('id,user_id,content,media_url,media_type,created_at').order('created_at',{ascending:false}).limit(100);if(state.feedFilter==='mine')q=q.eq('user_id',state.user.id);const {data:posts,error}=await q;if(error)throw error;const list=posts||[];const ids=[...new Set(list.map(p=>p.user_id))];const pids=list.map(p=>p.id);let profiles=[];if(ids.length){const r=await supabase.from('profiles').select('id,username,display_name,avatar_url,is_verified').in('id',ids);if(r.error)throw r.error;profiles=r.data||[];}let likes=[],comments=[],reposts=[];if(pids.length){const [a,b,c]=await Promise.all([supabase.from('post_likes').select('post_id,user_id').in('post_id',pids),supabase.from('post_comments').select('id,post_id,user_id,content,text,created_at').in('post_id',pids).order('created_at',{ascending:true}),supabase.from('post_reposts').select('post_id,user_id').in('post_id',pids)]);if(a.error)throw a.error;if(b.error)throw b.error;if(c.error)throw c.error;likes=a.data||[];comments=b.data||[];reposts=c.data||[];}const cids=[...new Set(comments.map(x=>x.user_id))].filter(x=>!ids.includes(x));if(cids.length){const r=await supabase.from('profiles').select('id,username,display_name,avatar_url,is_verified').in('id',cids);if(r.error)throw r.error;profiles.push(...(r.data||[]));}const pm=new Map(profiles.map(x=>[x.id,x]));const lc=new Map(),rc=new Map(),liked=new Set();likes.forEach(x=>{lc.set(x.post_id,(lc.get(x.post_id)||0)+1);if(x.user_id===state.user.id)liked.add(x.post_id)});reposts.forEach(x=>rc.set(x.post_id,(rc.get(x.post_id)||0)+1));const cm=new Map();comments.forEach(x=>{if(!cm.has(x.post_id))cm.set(x.post_id,[]);cm.get(x.post_id).push(x)});state.feed=list.map(p=>({...p,profile:pm.get(p.user_id)||{},pmap:pm,likes:lc.get(p.id)||0,liked:liked.has(p.id),reposts:rc.get(p.id)||0,comments:cm.get(p.id)||[]}));renderFeed();}catch(e){box.innerHTML=`<div class="feed-empty">Не удалось загрузить ленту.<br>${escapeHtml(friendlyError(e))}<br><button id="retryFeed" class="btn btn-secondary" style="margin-top:12px" type="button">Повторить</button></div>`;$('retryFeed')?.addEventListener('click',loadFeed);}}
-    function renderFeed(){const box=$('feedList');if(!state.feed.length){box.innerHTML='<div class="feed-empty">📰<br>Пока нет публикаций. Будьте первым!</div>';return;}box.innerHTML=state.feed.map(p=>{const pr=p.profile||{},name=pr.display_name||pr.username||'Пользователь';const ch=(p.comments||[]).slice(-10).map(c=>{const cp=p.pmap.get(c.user_id)||{},cn=cp.display_name||cp.username||'Пользователь';const ct=c.content ?? c.text ?? '';return `<div class="comment">${avatarMarkup(cp)}<div class="comment-body"><div class="comment-name">${escapeHtml(cn)}${verifiedMark(cp.id, cp)}</div><div class="comment-text">${escapeHtml(ct)}</div></div></div>`}).join('');return `<article class="post-card"><div class="post-head">${avatarMarkup(pr)}<div class="post-author"><div class="post-author-name">${escapeHtml(name)}${verifiedMark(pr.id, pr)}</div><div class="post-time">${escapeHtml(feedTime(p.created_at))}</div></div><button class="post-menu" type="button" data-feed="menu" data-id="${p.id}" aria-label="Меню публикации">⋮</button></div>${p.content?`<div class="post-text">${escapeHtml(p.content)}</div>`:''}${feedMedia(p)}<div class="post-stats"><span>❤️ ${p.likes}</span><span>💬 ${p.comments.length}</span><span>↗️ ${p.reposts}</span></div><div class="post-buttons"><button class="post-action ${p.liked?'liked':''}" data-feed="like" data-id="${p.id}" type="button">${p.liked?'♥':'♡'} Лайк</button><button class="post-action" data-feed="comment" data-id="${p.id}" type="button">💬 Комментировать</button><button class="post-action" data-feed="repost" data-id="${p.id}" type="button">↗ Поделиться</button></div><div class="comments"><div class="comment-list">${ch}</div><form class="comment-form" data-comment="${p.id}"><input maxlength="1000" placeholder="Написать комментарий…"><button class="btn btn-secondary" type="submit">Отправить</button></form></div></article>`}).join('');box.querySelectorAll('[data-feed="like"]').forEach(b=>b.onclick=()=>toggleLike(b.dataset.id));box.querySelectorAll('[data-feed="comment"]').forEach(b=>b.onclick=()=>box.querySelector(`[data-comment="${CSS.escape(b.dataset.id)}"] input`)?.focus());box.querySelectorAll('[data-feed="repost"]').forEach(b=>b.onclick=()=>repost(b.dataset.id));box.querySelectorAll('[data-feed="menu"]').forEach(b=>b.onclick=()=>openPostMenu(b.dataset.id));box.querySelectorAll('[data-comment]').forEach(f=>f.onsubmit=e=>commentPost(e,f.dataset.comment));}
+    function renderFeed(){const box=$('feedList');if(!state.feed.length){box.innerHTML='<div class="feed-empty">📰<br>Пока нет публикаций. Будьте первым!</div>';return;}box.innerHTML=state.feed.map(p=>{const pr=p.profile||{},name=pr.display_name||pr.username||'Пользователь';const ch=(p.comments||[]).slice(-10).map(c=>{const cp=p.pmap.get(c.user_id)||{},cn=cp.display_name||cp.username||'Пользователь';const ct=c.content ?? c.text ?? '';return `<div class="comment">${avatarMarkup(cp)}<div class="comment-body"><div class="comment-name"><button class="profile-link" type="button" data-profile-id="${escapeHtml(cp.id || '')}">${escapeHtml(cn)}${verifiedMark(cp.id, cp)}</button></div><div class="comment-text">${escapeHtml(ct)}</div></div></div>`}).join('');return `<article class="post-card"><div class="post-head">${avatarMarkup(pr)}<div class="post-author"><div class="post-author-name"><button class="profile-link" type="button" data-profile-id="${escapeHtml(pr.id || p.user_id || '')}">${escapeHtml(name)}${verifiedMark(pr.id, pr)}</button></div><div class="post-time">${escapeHtml(feedTime(p.created_at))}</div></div><button class="post-menu" type="button" data-feed="menu" data-id="${p.id}" aria-label="Меню публикации">⋮</button></div>${p.content?`<div class="post-text">${escapeHtml(p.content)}</div>`:''}${feedMedia(p)}<div class="post-stats"><span>❤️ ${p.likes}</span><span>💬 ${p.comments.length}</span><span>↗️ ${p.reposts}</span></div><div class="post-buttons"><button class="post-action ${p.liked?'liked':''}" data-feed="like" data-id="${p.id}" type="button">${p.liked?'♥':'♡'} Лайк</button><button class="post-action" data-feed="comment" data-id="${p.id}" type="button">💬 Комментировать</button><button class="post-action" data-feed="repost" data-id="${p.id}" type="button">↗ Поделиться</button></div><div class="comments"><div class="comment-list">${ch}</div><form class="comment-form" data-comment="${p.id}"><input maxlength="1000" placeholder="Написать комментарий…"><button class="btn btn-secondary" type="submit">Отправить</button></form></div></article>`}).join('');box.querySelectorAll('[data-feed="like"]').forEach(b=>b.onclick=()=>toggleLike(b.dataset.id));box.querySelectorAll('[data-feed="comment"]').forEach(b=>b.onclick=()=>box.querySelector(`[data-comment="${CSS.escape(b.dataset.id)}"] input`)?.focus());box.querySelectorAll('[data-feed="repost"]').forEach(b=>b.onclick=()=>repost(b.dataset.id));box.querySelectorAll('[data-feed="menu"]').forEach(b=>b.onclick=()=>openPostMenu(b.dataset.id));box.querySelectorAll('[data-profile-id]').forEach(b=>b.onclick=()=>loadPublicProfile(b.dataset.profileId));box.querySelectorAll('[data-comment]').forEach(f=>f.onsubmit=e=>commentPost(e,f.dataset.comment));}
     async function toggleLike(id){try{const p=state.feed.find(x=>x.id===id);if(!p)return;if(p.liked){const r=await supabase.from('post_likes').delete().eq('post_id',id).eq('user_id',state.user.id);if(r.error)throw r.error;p.liked=false;p.likes=Math.max(0,p.likes-1)}else{const r=await supabase.from('post_likes').insert({post_id:id,user_id:state.user.id});if(r.error)throw r;p.liked=true;p.likes++}renderFeed()}catch(e){showToast('Не удалось изменить лайк: '+friendlyError(e),'error')}}
     async function commentPost(e,id){e.preventDefault();const f=e.currentTarget,input=f.querySelector('input'),text=input.value.trim();if(!text)return;try{const r=await supabase.from('post_comments').insert({post_id:id,user_id:state.user.id,content:text}).select('id,post_id,user_id,content,text,created_at').single();if(r.error)throw r.error;const p=state.feed.find(x=>x.id===id);if(p)p.comments.push(r.data);input.value='';renderFeed();showToast('Комментарий добавлен.','success')}catch(x){showToast('Не удалось добавить комментарий: '+friendlyError(x),'error')}}
     async function repost(id){try{const r=await supabase.from('post_reposts').insert({post_id:id,user_id:state.user.id});if(r.error){if(/duplicate|unique/i.test(String(r.error.message||''))){showToast('Вы уже делились этой публикацией.','error');return}throw r.error}const p=state.feed.find(x=>x.id===id);if(p)p.reposts++;renderFeed();showToast('Публикация переслана.','success')}catch(e){showToast('Не удалось переслать: '+friendlyError(e),'error')}}
@@ -677,15 +858,15 @@
       }
       $('chatList').innerHTML = chats.map(chat => {
         const preview = chat.last ? (chat.last.sender_id === state.user.id ? 'Вы: ' : '') + String(chat.last.content || '') : (chat.username ? '@' + chat.username : 'Начните общение');
-        return `<button class="chat-item ${chat.id === state.selectedChatId ? 'selected' : ''}" type="button" data-chat-id="${escapeHtml(chat.id)}">${avatarMarkup(chat)}<span class="chat-item-info"><span class="chat-item-name" style="display:block">${escapeHtml(chat.name)}</span><span class="chat-preview" style="display:block">${escapeHtml(preview)}</span></span><span class="chat-preview">${escapeHtml(formatTime(chat.last?.created_at || chat.raw.created_at))}</span></button>`;
+        return `<button class="chat-item ${chat.id === state.selectedChatId ? 'selected' : ''}" type="button" data-chat-id="${escapeHtml(chat.id)}">${avatarMarkup(chat)}<span class="chat-item-info"><span class="chat-item-name profile-link" style="display:block" role="button" tabindex="0" data-profile-id="${escapeHtml(chat.other?.id || '')}">${escapeHtml(chat.name)}</span><span class="chat-preview" style="display:block">${escapeHtml(preview)}</span></span><span class="chat-preview">${escapeHtml(formatTime(chat.last?.created_at || chat.raw.created_at))}</span></button>`;
       }).join('');
-      $('chatList').querySelectorAll('[data-chat-id]').forEach(button => button.addEventListener('click', () => openChat(button.dataset.chatId)));
+      $('chatList').querySelectorAll('[data-chat-id]').forEach(button => button.addEventListener('click', () => openChat(button.dataset.chatId))); $('chatList').querySelectorAll('[data-profile-id]').forEach(el => el.addEventListener('click', e => { e.stopPropagation(); loadPublicProfile(el.dataset.profileId); }));
     }
     $('chatSearch').addEventListener('input', renderChats);
 
     function setMessageHeader(chat) {
       const name = chat?.name || 'Выберите чат';
-      $('messageName').textContent = name;
+      $('messageName').textContent = name; $('messageName').onclick = () => { if (chat?.other?.id) loadPublicProfile(chat.other.id); }; $('messageName').style.cursor = chat?.other?.id ? 'pointer' : 'default';
       $('messageStatus').textContent = chat?.username ? '@' + chat.username : (chat ? 'Личная переписка' : 'Сообщения появятся здесь');
       $('messageAvatar').innerHTML = chat?.avatar_url && /^https:\/\//i.test(chat.avatar_url) ? `<img src="${escapeHtml(chat.avatar_url)}" alt="">` : escapeHtml(initials(name));
       $('messageForm').hidden = !chat;
@@ -912,21 +1093,35 @@
       }, 10000);
     }
 
-    // 🎁 Подарки: хранятся как обычное сообщение, поэтому не требуют новой колонки в messages.
-    function giftContent(emoji, name) { return `[GIFT] ${JSON.stringify({emoji, name})}`; }
-    $('giftButton')?.addEventListener('click', (event) => { event.stopPropagation(); $('giftPicker').hidden = !$('giftPicker').hidden; });
-    document.querySelectorAll('[data-gift]').forEach(btn => btn.addEventListener('click', async () => {
-      const chatId = state.selectedChatId;
-      if (!chatId || !state.user) return;
-      const emoji = btn.dataset.gift, name = btn.dataset.giftName;
-      $('giftPicker').hidden = true;
-      try {
-        const { data, error } = await supabase.from('messages').insert({ conversation_id: chatId, sender_id: state.user.id, content: giftContent(emoji, name) }).select('id, conversation_id, sender_id, content, created_at').single();
-        if (error) throw error;
-        appendMessageIfNew(data); scrollMessagesToBottom(); await loadChats();
-      } catch (error) { showToast('Не удалось отправить подарок: ' + friendlyError(error), 'error'); }
-    }));
-    document.addEventListener('click', e => { if (!$('giftPicker')?.hidden && !$('giftPicker').contains(e.target) && e.target !== $('giftButton')) $('giftPicker').hidden = true; });
+    // 🎁 Подарки: количество хранится в user_gifts, а отправка проходит через защищённую RPC.
+    $('giftButton')?.addEventListener('click', async (event) => {
+      event.stopPropagation();
+      if (!$('giftPicker').hidden) { $('giftPicker').hidden = true; return; }
+      await loadGiftCatalog();
+      $('giftPicker').hidden = false;
+    });
+    $('giftBuyButton')?.addEventListener('click', () => {
+      const id = $('giftBuySelect')?.value;
+      if (id) buyGift(id);
+    });
+    document.addEventListener('click', e => {
+      if (!$('giftPicker')?.hidden && !$('giftPicker').contains(e.target) && e.target !== $('giftButton')) $('giftPicker').hidden = true;
+    });
+
+    async function adminRpc(name, args = {}) {
+      if (!state.user || !state.adminIds.has(String(state.user.id))) {
+        throw new Error('Недостаточно прав администратора.');
+      }
+      const { data, error } = await supabase.rpc(name, args);
+      if (error) throw error;
+      return data;
+    }
+
+    function renderModGiftOptions() {
+      return (state.giftCatalog || []).map(g =>
+        `<option value="${escapeHtml(g.id)}">${escapeHtml(g.emoji)} ${escapeHtml(g.name)}</option>`
+      ).join('');
+    }
 
     async function loadModerationUsers() {
       if (!state.user || !state.adminIds.has(String(state.user.id))) {
@@ -942,34 +1137,67 @@
       try {
         const { data, error } = await supabase
           .from('profiles')
-          .select('id,username,display_name,avatar_url,is_verified')
+          .select('id,username,display_name,avatar_url,is_verified,is_banned')
           .order('username')
           .limit(200);
 
         if (error) throw error;
 
-        box.innerHTML = (data || []).map(p => `
-          <div class="mod-user">
-            ${avatarMarkup(p)}
-            <div class="mod-user-info">
-              <div><b>${escapeHtml(p.display_name || p.username || 'Пользователь')}</b>${verifiedMark(p.id,p)}</div>
-              <div class="subtle">@${escapeHtml(p.username || '')}</div>
-            </div>
-            <div class="mod-actions">
-              <button class="btn btn-secondary" type="button" data-mod-verify="${escapeHtml(p.id)}">${p.is_verified ? 'Снять ✓' : '✓ Проверить'}</button>
-              <button class="btn btn-danger" type="button" data-mod-ban="${escapeHtml(p.id)}">🚫 Бан</button>
-            </div>
-          </div>
-        `).join('') || 'Пользователей пока нет.';
+        const query = String($('modSearch')?.value || '').trim().toLowerCase();
+        const users = (data || []).filter(p => {
+          if (!query) return true;
+          return String(p.username || '').toLowerCase().includes(query) ||
+                 String(p.display_name || '').toLowerCase().includes(query);
+        });
+
+        box.innerHTML = users.map(p => {
+          const banned = Boolean(p.is_banned);
+          const self = String(p.id) === String(state.user.id);
+          return `
+            <div class="mod-user">
+              ${avatarMarkup(p)}
+              <div class="mod-user-info">
+                <div>
+                  <button class="profile-link" type="button" data-mod-profile="${escapeHtml(p.id)}">
+                    <b>${escapeHtml(p.display_name || p.username || 'Пользователь')}</b>
+                  </button>
+                  ${verifiedMark(p.id,p)}
+                  ${self ? '<span class="badge-admin">👑 Владелец</span>' : ''}
+                </div>
+                <div class="subtle">@${escapeHtml(p.username || '')}</div>
+                <div class="mod-user-status ${banned ? 'banned' : 'ok'}">
+                  ${banned ? '🚫 Заблокирован' : '● Активен'}
+                </div>
+                <div class="mod-gift-row">
+                  <select data-mod-gift-select="${escapeHtml(p.id)}" aria-label="Подарок пользователю">
+                    ${renderModGiftOptions()}
+                  </select>
+                  <button class="btn btn-secondary" type="button" data-mod-gift="${escapeHtml(p.id)}">🎁 Выдать</button>
+                </div>
+              </div>
+              <div class="mod-actions">
+                <button class="btn btn-secondary" type="button" data-mod-verify="${escapeHtml(p.id)}">
+                  ${p.is_verified ? 'Снять ✓' : '✓ Выдать'}
+                </button>
+                ${self ? '' : (banned
+                  ? `<button class="btn btn-primary" type="button" data-mod-unban="${escapeHtml(p.id)}">🔓 Разбан</button>`
+                  : `<button class="btn btn-danger" type="button" data-mod-ban="${escapeHtml(p.id)}">🚫 Бан</button>`)}
+                <button class="btn btn-plain" type="button" data-mod-profile="${escapeHtml(p.id)}">👤 Профиль</button>
+              </div>
+            </div>`;
+        }).join('') || 'Пользователей не нашли.';
+
+        box.querySelectorAll('[data-mod-profile]').forEach(b => {
+          b.onclick = () => loadPublicProfile(b.dataset.modProfile);
+        });
 
         box.querySelectorAll('[data-mod-verify]').forEach(b => b.onclick = async () => {
           try {
-            const verified = b.textContent.includes('Проверить');
-            const { error } = await supabase.rpc('admin_set_verified', {
+            const verified = b.textContent.includes('Выдать');
+            await adminRpc('admin_set_verified', {
               target_user: b.dataset.modVerify,
               verified
             });
-            if (error) throw error;
             showToast(verified ? 'Галочка выдана.' : 'Галочка снята.', 'success');
             await loadModerationUsers();
             if (state.profile?.id === b.dataset.modVerify) await loadProfile();
@@ -981,16 +1209,55 @@
         box.querySelectorAll('[data-mod-ban]').forEach(b => b.onclick = async () => {
           const reason = prompt('Причина бана (необязательно):', 'Нарушение правил');
           if (reason === null) return;
+          const daysRaw = prompt('На сколько дней заблокировать?', '30');
+          if (daysRaw === null) return;
+          const days = Math.max(1, Math.min(3650, Number(daysRaw) || 30));
           try {
-            const { error } = await supabase.rpc('admin_ban_user', {
+            await adminRpc('admin_ban_user', {
               target_user: b.dataset.modBan,
               reason,
-              days: 30
+              days
             });
-            if (error) throw error;
-            showToast('Пользователь заблокирован на 30 дней.', 'success');
+            showToast(`Пользователь заблокирован на ${days} дн.`, 'success');
+            await loadModerationUsers();
           } catch (e) {
             showToast('Не удалось заблокировать: ' + friendlyError(e), 'error');
+          }
+        });
+
+        box.querySelectorAll('[data-mod-unban]').forEach(b => b.onclick = async () => {
+          if (!confirm('Разблокировать этого пользователя?')) return;
+          try {
+            await adminRpc('admin_unban_user', { target_user: b.dataset.modUnban });
+            showToast('Пользователь разблокирован.', 'success');
+            await loadModerationUsers();
+          } catch (e) {
+            showToast('Не удалось разблокировать: ' + friendlyError(e), 'error');
+          }
+        });
+
+        box.querySelectorAll('[data-mod-gift]').forEach(b => b.onclick = async () => {
+          const select = box.querySelector(`[data-mod-gift-select="${CSS.escape(b.dataset.modGift)}"]`);
+          const giftId = select?.value;
+          if (!giftId) {
+            showToast('Выберите подарок.', 'error');
+            return;
+          }
+          const gift = state.giftCatalog.find(x => String(x.id) === String(giftId));
+          if (!gift) return;
+          const amountRaw = prompt(`Сколько подарков «${gift.name}» выдать?`, '1');
+          if (amountRaw === null) return;
+          const amount = Math.max(1, Math.min(1000, Number(amountRaw) || 1));
+          try {
+            await adminRpc('admin_grant_gift', {
+              target_user: b.dataset.modGift,
+              gift_id: gift.id,
+              amount
+            });
+            showToast(`${gift.emoji} Выдано подарков: ${amount}.`, 'success');
+            await loadModerationUsers();
+          } catch (e) {
+            showToast('Не удалось выдать подарок: ' + friendlyError(e), 'error');
           }
         });
       } catch (e) {
@@ -998,6 +1265,9 @@
         $('retryModeration')?.addEventListener('click', loadModerationUsers);
       }
     }
+
+    $('modSearch')?.addEventListener('input', () => loadModerationUsers());
+
     $('messageForm').addEventListener('submit', async (event) => {
       event.preventDefault();
       const content = $('messageInput').value.trim();
@@ -1057,8 +1327,8 @@
           $('contactResults').innerHTML = `<div class="empty" style="grid-column:1/-1">${normalizedQuery ? 'Никого не нашли. Попробуйте другой запрос.' : 'Пока никто больше не зарегистрировался.'}</div>`;
           return;
         }
-        $('contactResults').innerHTML = people.map(person => `<div class="contact-card">${avatarMarkup(person)}<div class="contact-card-info"><div class="contact-card-name">${escapeHtml(person.display_name || person.username || 'Пользователь')}${verifiedMark(person.id)}</div><div class="contact-card-handle">@${escapeHtml(person.username || '')}</div></div><button class="btn btn-secondary" type="button" data-contact-id="${escapeHtml(person.id)}">Написать</button></div>`).join('');
-        $('contactResults').querySelectorAll('[data-contact-id]').forEach(button => button.addEventListener('click', () => startConversation(button.dataset.contactId)));
+        $('contactResults').innerHTML = people.map(person => `<div class="contact-card">${avatarMarkup(person)}<div class="contact-card-info"><div class="contact-card-name"><button class="profile-link" type="button" data-profile-id="${escapeHtml(person.id)}">${escapeHtml(person.display_name || person.username || 'Пользователь')}${verifiedMark(person.id)}</button></div><div class="contact-card-handle">@${escapeHtml(person.username || '')}</div></div><button class="btn btn-secondary" type="button" data-contact-id="${escapeHtml(person.id)}">Написать</button></div>`).join('');
+        $('contactResults').querySelectorAll('[data-contact-id]').forEach(button => button.addEventListener('click', () => startConversation(button.dataset.contactId))); $('contactResults').querySelectorAll('[data-profile-id]').forEach(button => button.addEventListener('click', e => { e.stopPropagation(); loadPublicProfile(button.dataset.profileId); }));
       } catch (error) {
         console.error('Load contacts failed:', error);
         $('contactResults').innerHTML = `<div class="empty" style="grid-column:1/-1">Не удалось загрузить пользователей: ${escapeHtml(friendlyError(error))}</div>`;
